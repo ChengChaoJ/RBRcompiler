@@ -1,17 +1,13 @@
 
-# RBRcompiler
-=======
 
+# RBRcompiler
 
 ---
-
-# RBRcompiler
 
 ## 一、准备工作
 
 1. **下载软件包**：
-    
-   - 点击[链接](#)，下载软件包 `BiShengCompiler-4.2.0.2-aarch64-linux.tar.gz`。(因为github上传大文件挺麻烦的)
+   - 点击[链接](https://www.hikunpeng.com/developer/devkit/download/bishengcompiler)，下载软件包 `BiShengCompiler-4.2.0.2-aarch64-linux.tar.gz`。（因为 GitHub 上传大文件挺麻烦的）
    - 将下载好的软件包放入 `RBRcompiler` 文件夹中，确保它与 `compiler` 文件夹处于同一层级。
 
 2. **配置 Docker**：
@@ -61,6 +57,4 @@
 - 最后，实验的结果会显示在终端中。
 
 ---
-
-
 
