@@ -1,7 +1,6 @@
 use std::fs;
-use std::path::Path;
 use clap::{Parser, ValueEnum};
-use anyhow::{Result, Context};
+use anyhow::{Result, Context, Error};
 use serde_json;
 
 mod lexer;
@@ -45,8 +44,9 @@ fn main() -> Result<()> {
     
     // Create lexer and tokenize
     let mut lexer = lexer::lexer::Lexer::new(&source_code);
-    let tokens = lexer.tokenize()
-        .with_context(|| "Failed to tokenize source code")?;
+    let tokens = lexer
+        .tokenize()
+        .map_err(|e| Error::msg(e))?;
     
     // Output tokens
     let output = match cli.format {
