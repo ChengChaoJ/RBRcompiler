@@ -17,7 +17,7 @@
    - 从终端进入 `RBRcompiler` 文件夹。
    - 输入以下命令构建镜像：
      ```bash
-     docker build --platform linux/arm64 -t my-compiler-app-2.0 .
+     docker build --platform linux/arm64 -t my-compiler-app-3.0 .
      ```
    - 构建完成后，输入以下命令查看现存的镜像：
      ```bash
@@ -30,7 +30,7 @@
 
 - 输入以下命令运行容器：
   ```bash
-  docker run -it my-compiler-app-2.0:latest /bin/bash
+  docker run -it my-compiler-app-3.0:latest /bin/bash
   ```
 
 ### 2. 进入脚本文件目录
