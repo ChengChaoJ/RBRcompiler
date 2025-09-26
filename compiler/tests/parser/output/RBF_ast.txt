@@ -1,0 +1,53 @@
+Program(
+    [
+        FunctionDeclaration {
+            return_type: "int",
+            name: "main",
+            parameters: [],
+            body: Block(
+                [
+                    VariableDeclaration {
+                        type_name: "int",
+                        name: "x",
+                        initializer: Some(
+                            IntegerLiteral(
+                                42,
+                            ),
+                        ),
+                    },
+                    VariableDeclaration {
+                        type_name: "int",
+                        name: "y",
+                        initializer: Some(
+                            IntegerLiteral(
+                                10,
+                            ),
+                        ),
+                    },
+                    VariableDeclaration {
+                        type_name: "int",
+                        name: "result",
+                        initializer: Some(
+                            BinaryExpression {
+                                operator: Add,
+                                left: Identifier(
+                                    "x",
+                                ),
+                                right: Identifier(
+                                    "y",
+                                ),
+                            },
+                        ),
+                    },
+                    ReturnStatement(
+                        Some(
+                            Identifier(
+                                "result",
+                            ),
+                        ),
+                    ),
+                ],
+            ),
+        },
+    ],
+)
