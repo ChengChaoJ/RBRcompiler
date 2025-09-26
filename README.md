@@ -55,6 +55,19 @@
   ./simple_test.sh
   ```
 - 最后，实验的结果会显示在终端中。
+4.实验2（ast生成）
+类似实验1，按顺序运行如下命令
+cd tests/parser
+
+dos2unix ./run_all.sh
+
+./run_all.sh 
+你就会在output目录下看到两个生成的文件。
+
+
+
+
+
 
 ---
 
