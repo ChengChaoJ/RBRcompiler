@@ -49,11 +49,12 @@ impl Parser {
                     None
                 };
                 self.consume(Token::Semicolon, "Expected ';' after variable declaration")?;
-                Ok(ASTNode::VariableDeclaration {
+                let var_decl = ASTNode::VariableDeclaration {
                     type_name,
                     name,
                     initializer: init.map(Box::new),
-                })
+                };
+                Ok(ASTNode::DeclStmt(Box::new(var_decl)))
             }
         } else {
             self.statement()
@@ -98,7 +99,6 @@ impl Parser {
     fn statement(&mut self) -> Result<ASTNode, CompileError> {
         // 调试：打印当前 token
         #[cfg(debug_assertions)]
-            println!("[statement] enter, peek token: {:?}", self.peek());
         if self.check_keyword("if") {
             self.if_statement()
         } else if self.check_keyword("while") {
@@ -107,7 +107,6 @@ impl Parser {
             self.for_statement()
         } else if self.check_keyword("return") {
             #[cfg(debug_assertions)]
-            println!("[statement] matched return keyword");
             self.return_statement()
         } else if self.check(&Token::LeftBrace) {
             self.block()
@@ -189,7 +188,6 @@ impl Parser {
 
     fn return_statement(&mut self) -> Result<ASTNode, CompileError> {
     #[cfg(debug_assertions)]
-        println!("[return_statement] enter, peek: {:?}", self.peek());
     self.advance(); // consume 'return'
         let value = if !self.check(&Token::Semicolon) {
             Some(self.expression()?)
@@ -275,11 +273,17 @@ impl Parser {
     fn primary(&mut self) -> Result<ASTNode, CompileError> {
         if let Some(value) = self.match_integer() {
             Ok(ASTNode::IntegerLiteral(value))
+        } else if let Some(value) = self.match_string() {
+            Ok(ASTNode::StringLiteral(value))
         } else if let Some(name) = self.match_identifier() {
             if self.check(&Token::LeftParen) {
                 self.function_call(name)
             } else {
-                Ok(ASTNode::Identifier(name))
+                let identifier = ASTNode::Identifier(name);
+                Ok(ASTNode::ImplicitCastExpr {
+                    cast_kind: "LValueToRValue".to_string(),
+                    operand: Box::new(identifier),
+                })
             }
         } else if self.match_token(&Token::LeftParen) {
             let expr = self.expression()?;
@@ -324,6 +328,12 @@ impl Parser {
         if !self.is_at_end() {
             self.current += 1;
         }
+        
+        // Skip whitespace tokens
+        while !self.is_at_end() && matches!(self.peek(), Token::Whitespace) {
+            self.current += 1;
+        }
+        
         self.previous()
     }
 
@@ -370,6 +380,16 @@ impl Parser {
     fn match_integer(&mut self) -> Option<i64> {
         if let Token::IntegerLiteral(value) = self.peek() {
             let value = *value;
+            self.advance();
+            Some(value)
+        } else {
+            None
+        }
+    }
+
+    fn match_string(&mut self) -> Option<String> {
+        if let Token::StringLiteral(value) = self.peek() {
+            let value = value.clone();
             self.advance();
             Some(value)
         } else {

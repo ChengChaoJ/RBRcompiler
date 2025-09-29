@@ -31,7 +31,7 @@ echo ""
 
 # 使用自研编译器生成token流
 echo -e "${BLUE}=== 使用自研编译器生成token流 ===${NC}"
-cargo run --manifest-path "$SCRIPT_DIR/../../Cargo.toml" -- "$TEST_FILE" > "$OUTPUT_DIR/RBF_tokens.txt" || {
+cargo run --manifest-path "$SCRIPT_DIR/../../Cargo.toml" -- --emit tokens "$TEST_FILE" > "$OUTPUT_DIR/RBF_tokens.txt" || {
     echo "错误: 自研编译器生成token流失败"
     exit 1
 }
