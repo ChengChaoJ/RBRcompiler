@@ -27,7 +27,7 @@ echo ""
 
 # 使用自研 parser 生成 AST
 echo -e "${BLUE}=== 使用自研 parser 生成 AST ===${NC}"
-cargo run --manifest-path "$SCRIPT_DIR/../../Cargo.toml" -- "$TEST_FILE" --ast-output "$OUTPUT_DIR/RBF_ast.txt" || {
+cargo run --manifest-path "$SCRIPT_DIR/../../Cargo.toml" -- "$TEST_FILE" --ast-output "$OUTPUT_DIR/RBF_ast.txt" --ast-bisheng || {
     echo "错误: 自研 parser 生成 AST 失败"
     exit 1
 }
