@@ -11,6 +11,12 @@ pub enum Token {
     Multiply,
     Divide,
     Assign,
+    GreaterThan,
+    LessThan,
+    GreaterEqual,
+    LessEqual,
+    Equal,
+    NotEqual,
     Semicolon,
     Comma,
     LeftParen,
@@ -42,6 +48,12 @@ impl Token {
             Token::Multiply => "Multiply".to_string(),
             Token::Divide => "Divide".to_string(),
             Token::Assign => "Assign".to_string(),
+            Token::GreaterThan => "GreaterThan".to_string(),
+            Token::LessThan => "LessThan".to_string(),
+            Token::GreaterEqual => "GreaterEqual".to_string(),
+            Token::LessEqual => "LessEqual".to_string(),
+            Token::Equal => "Equal".to_string(),
+            Token::NotEqual => "NotEqual".to_string(),
             Token::Semicolon => "Semicolon".to_string(),
             Token::Comma => "Comma".to_string(),
             Token::LeftParen => "LeftParen".to_string(),
@@ -64,6 +76,12 @@ impl Token {
             Token::Multiply => "star".to_string(),
             Token::Divide => "slash".to_string(),
             Token::Assign => "equal".to_string(),
+            Token::GreaterThan => "greater".to_string(),
+            Token::LessThan => "less".to_string(),
+            Token::GreaterEqual => "greaterequal".to_string(),
+            Token::LessEqual => "lessequal".to_string(),
+            Token::Equal => "equalequal".to_string(),
+            Token::NotEqual => "exclaimequal".to_string(),
             Token::Semicolon => "semi".to_string(),
             Token::Comma => "comma".to_string(),
             Token::LeftParen => "l_paren".to_string(),
@@ -86,6 +104,12 @@ impl Token {
             Token::Multiply => "*".to_string(),
             Token::Divide => "/".to_string(),
             Token::Assign => "=".to_string(),
+            Token::GreaterThan => ">".to_string(),
+            Token::LessThan => "<".to_string(),
+            Token::GreaterEqual => ">=".to_string(),
+            Token::LessEqual => "<=".to_string(),
+            Token::Equal => "==".to_string(),
+            Token::NotEqual => "!=".to_string(),
             Token::Semicolon => ";".to_string(),
             Token::Comma => ",".to_string(),
             Token::LeftParen => "(".to_string(),
@@ -113,7 +137,7 @@ impl TokenWithInfo {
         let kind = self.token.get_bisheng_kind();
         let value = self.token.get_bisheng_value();
         let flags_str = if self.flags.is_empty() {
-            "".to_string()
+            "\t\t".to_string()
         } else {
             format!("\t {}", self.flags.iter().map(|f| format!("[{}]", f)).collect::<Vec<_>>().join(" "))
         };

@@ -1,5 +1,6 @@
 use super::token::{Token, TokenWithInfo};
 use super::keywords::c_keywords;
+use crate::error::error::LexerError;
 
 pub struct Lexer {
     pub input: Vec<char>,
@@ -153,7 +154,47 @@ impl Lexer {
             '=' => {
                 self.position += 1;
                 self.column += 1;
-                Ok(Token::Assign)
+                if self.position < self.input.len() && self.input[self.position] == '=' {
+                    self.position += 1;
+                    self.column += 1;
+                    Ok(Token::Equal)
+                } else {
+                    Ok(Token::Assign)
+                }
+            }
+            '>' => {
+                self.position += 1;
+                self.column += 1;
+                if self.position < self.input.len() && self.input[self.position] == '=' {
+                    self.position += 1;
+                    self.column += 1;
+                    Ok(Token::GreaterEqual)
+                } else {
+                    Ok(Token::GreaterThan)
+                }
+            }
+            '<' => {
+                self.position += 1;
+                self.column += 1;
+                if self.position < self.input.len() && self.input[self.position] == '=' {
+                    self.position += 1;
+                    self.column += 1;
+                    Ok(Token::LessEqual)
+                } else {
+                    Ok(Token::LessThan)
+                }
+            }
+            '!' => {
+                self.position += 1;
+                self.column += 1;
+                if self.position < self.input.len() && self.input[self.position] == '=' {
+                    self.position += 1;
+                    self.column += 1;
+                    Ok(Token::NotEqual)
+                } else {
+                    Err(format!("Unexpected character '{}' at line {}, column {}", 
+                               ch, self.line, self.column))
+                }
             }
             ';' => {
                 self.position += 1;
@@ -238,7 +279,46 @@ impl Lexer {
             '=' => {
                 self.position += 1;
                 self.column += 1;
-                Token::Assign
+                if self.position < self.input.len() && self.input[self.position] == '=' {
+                    self.position += 1;
+                    self.column += 1;
+                    Token::Equal
+                } else {
+                    Token::Assign
+                }
+            }
+            '>' => {
+                self.position += 1;
+                self.column += 1;
+                if self.position < self.input.len() && self.input[self.position] == '=' {
+                    self.position += 1;
+                    self.column += 1;
+                    Token::GreaterEqual
+                } else {
+                    Token::GreaterThan
+                }
+            }
+            '<' => {
+                self.position += 1;
+                self.column += 1;
+                if self.position < self.input.len() && self.input[self.position] == '=' {
+                    self.position += 1;
+                    self.column += 1;
+                    Token::LessEqual
+                } else {
+                    Token::LessThan
+                }
+            }
+            '!' => {
+                self.position += 1;
+                self.column += 1;
+                if self.position < self.input.len() && self.input[self.position] == '=' {
+                    self.position += 1;
+                    self.column += 1;
+                    Token::NotEqual
+                } else {
+                    return Err(LexerError::UnexpectedCharacter(ch, self.line, self.column).to_string());
+                }
             }
             ';' => {
                 self.position += 1;

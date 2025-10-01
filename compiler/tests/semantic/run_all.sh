@@ -1,67 +1,34 @@
 #!/bin/bash
 
-# Semantic分析测试脚本
-# 参考parser/run_all.sh的格式
+echo "=== 运行所有语义分析测试 ==="
 
-echo "=== Semantic Analysis Tests ==="
+# 确保output目录存在
+mkdir -p output
 
-# 设置路径
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMPILER_DIR="$(dirname "$SCRIPT_DIR")"
-COMPILER_DIR="$(dirname "$COMPILER_DIR")"
-OUTPUT_DIR="$SCRIPT_DIR/output"
+# 运行所有测试
+echo "1. 运行基础语义分析测试..."
+./test_basic.sh
+echo
 
-# 确保输出目录存在
-mkdir -p "$OUTPUT_DIR"
+echo "2. 运行函数语义分析测试..."
+./test_functions.sh
+echo
 
-# 测试文件列表
-TEST_FILES=(
-    "test_simple.c"
-    "test_errors.c" 
-    "test_functions.c"
-)
+echo "3. 运行控制流语义分析测试..."
+./test_control_flow.sh
+echo
 
-echo "开始运行semantic分析测试..."
+echo "4. 运行表达式语义分析测试..."
+./test_expressions.sh
+echo
 
-for test_file in "${TEST_FILES[@]}"; do
-    echo ""
-    echo "=== 测试文件: $test_file ==="
-    
-    TEST_PATH="$SCRIPT_DIR/$test_file"
-    RBF_OUTPUT="$OUTPUT_DIR/RBF_${test_file%.c}_semantic.txt"
-    BISHENG_OUTPUT="$OUTPUT_DIR/bisheng_${test_file%.c}_semantic.txt"
-    DIFF_OUTPUT="$OUTPUT_DIR/${test_file%.c}_semantic.diff"
-    
-    echo "测试文件: $TEST_PATH"
-    echo "RBF输出: $RBF_OUTPUT"
-    echo "Bisheng输出: $BISHENG_OUTPUT"
-    
-    # 运行RBF编译器
-    echo "运行RBF编译器..."
-    cd "$COMPILER_DIR"
-    RUST_LOG=error cargo run --quiet -- --emit semantic "$TEST_PATH" > "$RBF_OUTPUT" 2>/dev/null
-    
-    # 运行bisheng编译器获取semantic输出
-    echo "运行bisheng编译器..."
-    clang -fsyntax-only "$TEST_PATH" > "$BISHENG_OUTPUT" 2>&1
-    
-    # 比较输出
-    echo "比较输出..."
-    if diff -u "$BISHENG_OUTPUT" "$RBF_OUTPUT" > "$DIFF_OUTPUT"; then
-        echo "✅ $test_file - 输出完全匹配！"
-        echo "Bisheng输出:"
-        cat "$BISHENG_OUTPUT"
-        echo ""
-        echo "RBF输出:"
-        cat "$RBF_OUTPUT"
-    else
-        echo "❌ $test_file - 输出不匹配，差异如下:"
-        cat "$DIFF_OUTPUT"
-    fi
-    
-    echo "---"
-done
+echo "5. 运行错误语义分析测试..."
+./test_errors.sh
+echo
 
-echo ""
-echo "=== 所有测试完成 ==="
-echo "输出文件位置: $OUTPUT_DIR"
+echo "6. 运行简单语义分析测试..."
+./test_simple.sh
+echo
+
+echo "=== 所有语义分析测试完成 ==="
+echo "查看 output/ 目录中的结果文件"
