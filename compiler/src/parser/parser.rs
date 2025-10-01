@@ -41,20 +41,46 @@ impl Parser {
             if is_func {
                 self.function_declaration()
             } else {
+                // 处理变量声明，支持多个变量声明（如 int i, j;）
                 let type_name = self.consume_type()?;
-                let name = self.consume_identifier()?;
-                let init = if self.match_token(&Token::Assign) {
-                    Some(self.expression()?)
+                let mut declarations = Vec::new();
+                
+                loop {
+                    let name = self.consume_identifier()?;
+                    let init = if self.match_token(&Token::Assign) {
+                        Some(self.expression()?)
+                    } else {
+                        None
+                    };
+                    
+                    declarations.push(ASTNode::VariableDeclaration {
+                        type_name: type_name.clone(),
+                        name,
+                        initializer: init.map(Box::new),
+                    });
+                    
+                    if !self.match_token(&Token::Comma) {
+                        break;
+                    }
+                }
+                
+                self.consume(Token::Semicolon, &format!("Expected ';' after variable declaration, got: {:?}", self.peek()))?;
+                
+                // 如果有多个声明，返回一个DeclStmt包含所有声明
+                if declarations.len() == 1 {
+                    Ok(ASTNode::DeclStmt(Box::new(declarations.into_iter().next().unwrap())))
                 } else {
-                    None
-                };
-                self.consume(Token::Semicolon, "Expected ';' after variable declaration")?;
-                let var_decl = ASTNode::VariableDeclaration {
-                    type_name,
-                    name,
-                    initializer: init.map(Box::new),
-                };
-                Ok(ASTNode::DeclStmt(Box::new(var_decl)))
+                    // 多个声明时，创建一个MultiVarDecl节点
+                    let first_decl = declarations[0].clone();
+                    if let ASTNode::VariableDeclaration { type_name, .. } = &first_decl {
+                        Ok(ASTNode::MultiVarDecl {
+                            type_name: type_name.clone(),
+                            declarations,
+                        })
+                    } else {
+                        Ok(ASTNode::DeclStmt(Box::new(first_decl)))
+                    }
+                }
             }
         } else {
             self.statement()
@@ -84,21 +110,30 @@ impl Parser {
         }
         
         self.consume(Token::RightParen, "Expected ')' after parameters")?;
-        self.consume(Token::LeftBrace, "Expected '{' before function body")?;
-        // block() 不再 advance，由调用者 consume '{'
-        let body = self.block()?;
-        Ok(ASTNode::FunctionDeclaration {
-            return_type,
-            name,
-            parameters,
-            body: Box::new(body),
-        })
+        
+        // 检查是函数声明还是函数定义
+        if self.match_token(&Token::Semicolon) {
+            // 函数声明，没有函数体
+            Ok(ASTNode::FunctionDecl {
+                return_type,
+                name,
+                parameters,
+            })
+        } else {
+            // 函数定义，有函数体
+            self.consume(Token::LeftBrace, "Expected '{' before function body")?;
+            let body = self.block()?;
+            Ok(ASTNode::FunctionDeclaration {
+                return_type,
+                name,
+                parameters,
+                body: Box::new(body),
+            })
+        }
     }
 
     // Statement parsing
     fn statement(&mut self) -> Result<ASTNode, CompileError> {
-        // 调试：打印当前 token
-        #[cfg(debug_assertions)]
         if self.check_keyword("if") {
             self.if_statement()
         } else if self.check_keyword("while") {
@@ -106,10 +141,7 @@ impl Parser {
         } else if self.check_keyword("for") {
             self.for_statement()
         } else if self.check_keyword("return") {
-            #[cfg(debug_assertions)]
             self.return_statement()
-        } else if self.check(&Token::LeftBrace) {
-            self.block()
         } else {
             match self.peek() {
                 Token::Identifier(_) | Token::IntegerLiteral(_) | Token::LeftParen => self.expression_statement(),
@@ -124,9 +156,25 @@ impl Parser {
         let condition = self.expression()?;
         self.consume(Token::RightParen, "Expected ')' after if condition")?;
         
-        let then_branch = self.statement()?;
+        // 处理then分支
+        let then_branch = if self.check(&Token::LeftBrace) {
+            self.advance(); // consume '{'
+            self.block()?
+        } else {
+            self.expression_statement()?
+        };
+        
+        // 处理else分支
         let else_branch = if self.match_keyword("else") {
-            Some(self.statement()?)
+            Some(if self.check_keyword("if") {
+                // 处理 else if 语句
+                self.if_statement()?
+            } else if self.check(&Token::LeftBrace) {
+                self.advance(); // consume '{'
+                self.block()?
+            } else {
+                self.expression_statement()?
+            })
         } else {
             None
         };
@@ -138,12 +186,21 @@ impl Parser {
         })
     }
 
+
+
     fn while_statement(&mut self) -> Result<ASTNode, CompileError> {
         self.advance(); // consume 'while'
         self.consume(Token::LeftParen, "Expected '(' after 'while'")?;
         let condition = self.expression()?;
         self.consume(Token::RightParen, "Expected ')' after while condition")?;
-        let body = self.statement()?;
+        
+        // 处理body
+        let body = if self.check(&Token::LeftBrace) {
+            self.advance(); // consume '{'
+            self.block()?
+        } else {
+            self.expression_statement()?
+        };
         
         Ok(ASTNode::WhileStatement {
             condition: Box::new(condition),
@@ -158,15 +215,37 @@ impl Parser {
         let init = if self.check(&Token::Semicolon) {
             self.advance();
             None
+        } else if self.check_keyword("int") || self.check_keyword("float") || self.check_keyword("char") || self.check_keyword("void") {
+            // 处理for循环中的变量声明
+            let type_name = self.consume_type()?;
+            let name = self.consume_identifier()?;
+            let initializer = if self.match_token(&Token::Assign) {
+                Some(self.expression()?)
+            } else {
+                None
+            };
+            // 消耗分号
+            self.consume(Token::Semicolon, "Expected ';' after for init declaration")?;
+            Some(ASTNode::DeclStmt(Box::new(ASTNode::VariableDeclaration {
+                type_name,
+                name,
+                initializer: initializer.map(Box::new),
+            })))
         } else {
-            Some(self.expression()?)
+            let expr = Some(self.expression()?);
+            // 消耗分号
+            self.consume(Token::Semicolon, "Expected ';' after for init expression")?;
+            expr
         };
         
         let condition = if self.check(&Token::Semicolon) {
             self.advance();
             None
         } else {
-            Some(self.expression()?)
+            let expr = Some(self.expression()?);
+            // 消耗分号
+            self.consume(Token::Semicolon, "Expected ';' after for condition")?;
+            expr
         };
         
         let update = if self.check(&Token::RightParen) {
@@ -175,8 +254,15 @@ impl Parser {
             Some(self.expression()?)
         };
         
-        self.consume(Token::RightParen, "Expected ')' after for clauses")?;
-        let body = self.statement()?;
+        self.consume(Token::RightParen, &format!("Expected ')' after for clauses, got: {:?}", self.peek()))?;
+        
+        // 处理body
+        let body = if self.check(&Token::LeftBrace) {
+            self.advance(); // consume '{'
+            self.block()?
+        } else {
+            self.expression_statement()?
+        };
         
         Ok(ASTNode::ForStatement {
             init: init.map(Box::new),
@@ -187,8 +273,7 @@ impl Parser {
     }
 
     fn return_statement(&mut self) -> Result<ASTNode, CompileError> {
-    #[cfg(debug_assertions)]
-    self.advance(); // consume 'return'
+        self.advance(); // consume 'return'
         let value = if !self.check(&Token::Semicolon) {
             Some(self.expression()?)
         } else {
@@ -215,9 +300,61 @@ impl Parser {
                 self.advance();
                 break;
             }
-            // declaration 必须推进 token，否则死循环
+            // 在block中只处理变量声明和语句，不处理函数声明
             let before = self.current;
-            let stmt = self.declaration()?;
+            let stmt = if self.check_keyword("int") || self.check_keyword("float") || self.check_keyword("char") || self.check_keyword("void") {
+                // 检查是否为函数声明，如果是则报错（函数声明不应该在block内部）
+                let is_func = match (self.tokens.get(self.current), self.tokens.get(self.current + 1), self.tokens.get(self.current + 2)) {
+                    (Some(Token::Keyword(_)), Some(Token::Identifier(_)), Some(Token::LeftParen)) => true,
+                    _ => false,
+                };
+                if is_func {
+                    return Err(CompileError::Parse("Function declaration not allowed inside block".to_string()));
+                } else {
+                    // 变量声明，支持多个变量声明（如 int i, j;）
+                    let type_name = self.consume_type()?;
+                    let mut declarations = Vec::new();
+                    
+                    loop {
+                        let name = self.consume_identifier()?;
+                        let init = if self.match_token(&Token::Assign) {
+                            Some(self.expression()?)
+                        } else {
+                            None
+                        };
+                        
+                        declarations.push(ASTNode::VariableDeclaration {
+                            type_name: type_name.clone(),
+                            name,
+                            initializer: init.map(Box::new),
+                        });
+                        
+                        if !self.match_token(&Token::Comma) {
+                            break;
+                        }
+                    }
+                    
+                    self.consume(Token::Semicolon, "Expected ';' after variable declaration")?;
+                    
+                    // 如果有多个声明，返回一个DeclStmt包含所有声明
+                    if declarations.len() == 1 {
+                        ASTNode::DeclStmt(Box::new(declarations.into_iter().next().unwrap()))
+                    } else {
+                        // 多个声明时，创建一个MultiVarDecl节点
+                        let first_decl = declarations[0].clone();
+                        if let ASTNode::VariableDeclaration { type_name, .. } = &first_decl {
+                            ASTNode::MultiVarDecl {
+                                type_name: type_name.clone(),
+                                declarations,
+                            }
+                        } else {
+                            ASTNode::DeclStmt(Box::new(first_decl))
+                        }
+                    }
+                }
+            } else {
+                self.statement()?
+            };
             if self.current == before {
                 return Err(CompileError::Parse("Parser did not advance in block; possible infinite loop".to_string()));
             }
@@ -240,14 +377,29 @@ impl Parser {
     fn parse_precedence(&mut self, precedence: Precedence) -> Result<ASTNode, CompileError> {
         let mut expr = self.unary()?;
         
-        while precedence < self.get_precedence() {
+        while precedence <= self.get_precedence() {
             let operator = self.get_binary_operator()?;
             self.advance();
-            let right = self.parse_precedence(self.get_precedence())?;
-            expr = ASTNode::BinaryExpression {
-                operator,
-                left: Box::new(expr),
-                right: Box::new(right),
+            // 根据操作符类型确定右操作数的优先级
+            let next_precedence = match operator {
+                BinaryOperator::Equal => Precedence::Assignment,
+                BinaryOperator::Add | BinaryOperator::Subtract => Precedence::Additive,
+                BinaryOperator::Multiply | BinaryOperator::Divide => Precedence::Multiplicative,
+                BinaryOperator::GreaterThan | BinaryOperator::LessThan | 
+                BinaryOperator::GreaterEqual | BinaryOperator::LessEqual => Precedence::Relational,
+                BinaryOperator::EqualEqual | BinaryOperator::NotEqual => Precedence::Equality,
+            };
+            let right = self.parse_precedence(next_precedence)?;
+            expr = match operator {
+                BinaryOperator::Equal => ASTNode::AssignmentExpression {
+                    target: Box::new(expr),
+                    value: Box::new(right),
+                },
+                _ => ASTNode::BinaryExpression {
+                    operator,
+                    left: Box::new(expr),
+                    right: Box::new(right),
+                },
             };
         }
         
@@ -279,20 +431,59 @@ impl Parser {
             if self.check(&Token::LeftParen) {
                 self.function_call(name)
             } else {
-                let identifier = ASTNode::Identifier(name);
-                Ok(ASTNode::ImplicitCastExpr {
-                    cast_kind: "LValueToRValue".to_string(),
-                    operand: Box::new(identifier),
-                })
+                Ok(ASTNode::Identifier(name))
             }
         } else if self.match_token(&Token::LeftParen) {
             let expr = self.expression()?;
             self.consume(Token::RightParen, "Expected ')' after expression")?;
             Ok(expr)
         } else {
-            Err(CompileError::Parse("Expected expression".to_string()))
+            Err(CompileError::Parse(format!("Expected expression, got: {:?}", self.peek())))
         }
     }
+
+    fn get_precedence(&self) -> Precedence {
+        if self.is_at_end() {
+            return Precedence::Lowest;
+        }
+        
+        match self.tokens.get(self.current) {
+            Some(Token::Assign) => Precedence::Assignment,
+            Some(Token::Equal) => Precedence::Equality,
+            Some(Token::NotEqual) => Precedence::Equality,
+            Some(Token::LessThan) => Precedence::Relational,
+            Some(Token::LessEqual) => Precedence::Relational,
+            Some(Token::GreaterThan) => Precedence::Relational,
+            Some(Token::GreaterEqual) => Precedence::Relational,
+            Some(Token::Plus) => Precedence::Additive,
+            Some(Token::Minus) => Precedence::Additive,
+            Some(Token::Multiply) => Precedence::Multiplicative,
+            Some(Token::Divide) => Precedence::Multiplicative,
+            _ => Precedence::Lowest,
+        }
+    }
+
+    fn get_binary_operator(&self) -> Result<BinaryOperator, CompileError> {
+        if self.is_at_end() {
+            return Err(CompileError::Parse("Expected binary operator".to_string()));
+        }
+        
+        match self.tokens.get(self.current) {
+            Some(Token::Assign) => Ok(BinaryOperator::Equal),
+            Some(Token::Equal) => Ok(BinaryOperator::EqualEqual),
+            Some(Token::NotEqual) => Ok(BinaryOperator::NotEqual),
+            Some(Token::LessThan) => Ok(BinaryOperator::LessThan),
+            Some(Token::LessEqual) => Ok(BinaryOperator::LessEqual),
+            Some(Token::GreaterThan) => Ok(BinaryOperator::GreaterThan),
+            Some(Token::GreaterEqual) => Ok(BinaryOperator::GreaterEqual),
+            Some(Token::Plus) => Ok(BinaryOperator::Add),
+            Some(Token::Minus) => Ok(BinaryOperator::Subtract),
+            Some(Token::Multiply) => Ok(BinaryOperator::Multiply),
+            Some(Token::Divide) => Ok(BinaryOperator::Divide),
+            _ => Err(CompileError::Parse("Expected binary operator".to_string())),
+        }
+    }
+
 
     fn function_call(&mut self, name: String) -> Result<ASTNode, CompileError> {
         self.advance(); // consume '('
@@ -317,11 +508,19 @@ impl Parser {
     }
 
     fn peek(&self) -> &Token {
-        &self.tokens[self.current]
+        if self.current >= self.tokens.len() {
+            &Token::EOF
+        } else {
+            &self.tokens[self.current]
+        }
     }
 
     fn previous(&self) -> &Token {
-        &self.tokens[self.current - 1]
+        if self.current == 0 {
+            &Token::EOF
+        } else {
+            &self.tokens[self.current - 1]
+        }
     }
 
     fn advance(&mut self) -> &Token {
@@ -437,25 +636,6 @@ impl Parser {
         self.match_identifier().ok_or_else(|| CompileError::Parse("Expected identifier".to_string()))
     }
 
-    fn get_precedence(&self) -> Precedence {
-        match self.peek() {
-            Token::Assign => Precedence::Assignment,
-            Token::Plus | Token::Minus => Precedence::Additive,
-            Token::Multiply | Token::Divide => Precedence::Multiplicative,
-            _ => Precedence::Lowest,
-        }
-    }
-
-    fn get_binary_operator(&self) -> Result<BinaryOperator, CompileError> {
-        match self.peek() {
-            Token::Plus => Ok(BinaryOperator::Add),
-            Token::Minus => Ok(BinaryOperator::Subtract),
-            Token::Multiply => Ok(BinaryOperator::Multiply),
-            Token::Divide => Ok(BinaryOperator::Divide),
-            Token::Assign => Ok(BinaryOperator::Equal), // Simplified assignment
-            _ => Err(CompileError::Parse("Expected binary operator".to_string())),
-        }
-    }
 
     fn synchronize(&mut self) {
         self.advance();

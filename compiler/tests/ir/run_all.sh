@@ -40,7 +40,7 @@ for test_file in "${TEST_FILES[@]}"; do
     # 运行RBF编译器
     echo "运行RBF编译器..."
     cd "$COMPILER_DIR"
-    cargo run -- --emit-ir "$TEST_PATH" 2>/dev/null > "$RBF_OUTPUT"
+    cargo run -- --emit-ir "$TEST_PATH" > "$RBF_OUTPUT" 2>&1
     
     # 运行bisheng编译器获取IR输出
     echo "运行bisheng编译器..."

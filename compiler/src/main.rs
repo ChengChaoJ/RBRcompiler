@@ -9,7 +9,7 @@ mod parser;
 mod semantic;
 mod bisheng;
 mod ir;
-mod riscv;
+mod arm;
 mod error;
 mod utils;
 
@@ -36,6 +36,10 @@ struct Cli {
     /// Emit IR (Intermediate Representation)
     #[arg(long)]
     emit_ir: bool,
+
+    /// Emit ARM assembly
+    #[arg(long)]
+    emit_arm: bool,
 
     /// Output file (token 输出，默认 stdout)
     #[arg(short, long)]
@@ -109,7 +113,20 @@ fn main() -> Result<()> {
         let mut parser = parser::parser::Parser::new(tokens);
         let ast = parser.parse().map_err(|e| Error::msg(e))?;
         
-        let mut generator = ir::llvm_generator::LLVMIRGenerator::new();
+        // 先进行语义分析
+        let mut analyzer = semantic::analyzer::SemanticAnalyzer::new();
+        let semantic_errors = analyzer.analyze_all_errors(&ast);
+        
+        // 如果有语义错误，输出错误信息
+        if !semantic_errors.is_empty() {
+            let source_code = fs::read_to_string(&cli.file)
+                .with_context(|| format!("Failed to read file: {}", cli.file))?;
+            let error_output = analyzer.generate_bisheng_semantic_output(&ast, &cli.file, &source_code);
+            print!("{}", error_output);
+            return Ok(());
+        }
+        
+        let mut generator = ir::llvm_generator::LLVMIRGenerator::new_with_file_path(cli.file.clone());
         let output = generator.generate(&ast).map_err(|e| Error::msg(e))?;
         
         if let Some(output_file) = cli.output {
@@ -121,6 +138,46 @@ fn main() -> Result<()> {
         }
         return Ok(());
     }
+
+        // 处理ARM汇编输出
+        if cli.emit_arm {
+            let tokens = lexer
+                .tokenize()
+                .map_err(|e| Error::msg(e))?;
+            
+            let mut parser = parser::parser::Parser::new(tokens);
+            let ast = parser.parse().map_err(|e| Error::msg(e))?;
+            
+            // 先进行语义分析
+            let mut analyzer = semantic::analyzer::SemanticAnalyzer::new();
+            let semantic_errors = analyzer.analyze_all_errors(&ast);
+            
+            // 如果有语义错误，输出错误信息
+            if !semantic_errors.is_empty() {
+                let source_code = fs::read_to_string(&cli.file)
+                    .with_context(|| format!("Failed to read file: {}", cli.file))?;
+                let error_output = analyzer.generate_bisheng_semantic_output(&ast, &cli.file, &source_code);
+                print!("{}", error_output);
+                return Ok(());
+            }
+            
+            // 从AST生成IR
+            let mut ir_generator = ir::generator::IRGenerator::new();
+            let ir_functions = ir_generator.generate(&ast).map_err(|e| Error::msg(e))?;
+            
+            // 从IR生成ARM汇编
+            let mut arm_generator = arm::ArmCodegen::new();
+            let arm_output = arm_generator.generate(&ir_functions);
+            
+            if let Some(output_file) = cli.output {
+                arm::write_assembly(&output_file, &arm_output)
+                    .with_context(|| format!("Failed to write ARM assembly file: {}", output_file))?;
+                println!("ARM assembly written to: {}", output_file);
+            } else {
+                print!("{}", arm_output);
+            }
+            return Ok(());
+        }
     
     let tokens = lexer
         .tokenize()

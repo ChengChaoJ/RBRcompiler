@@ -116,21 +116,31 @@ TranslationUnitDecl 0x400000c76368 <<invalid sloc>> <invalid sloc>
 |-TypedefDecl 0x400000d23b88 <<invalid sloc>> <invalid sloc> implicit __builtin_va_list 'struct __va_list'
 | `-RecordType 0x400000d23970 'struct __va_list'
 |   `-Record 0x400000d238e8 '__va_list'
-`-FunctionDecl 0x400000d23c30 </app/compiler/tests/parser/test_simple.c:1:1, line:6:1> line:1:5 main 'int ()'
-    `-CompoundStmt 0x400000d24000 <col:12, line:6:1>
-    |   |-DeclStmt 0x400000d23dc0 <line:2:5, col:15>
-    |       `-VarDecl 0x400000d23d38 <col:5, col:13> col:9 used x 'int' cinit
-    |           `-IntegerLiteral 0x400000d23da0 <col:13> 'int' 42
-    |   |-DeclStmt 0x400000d23e78 <line:3:5, col:15>
-    |       `-VarDecl 0x400000d23df0 <col:5, col:13> col:9 used y 'int' cinit
-    |           `-IntegerLiteral 0x400000d23e58 <col:13> 'int' 10
-    |   |-DeclStmt 0x400000d23fa0 <line:4:5, col:23>
-    |       `-VarDecl 0x400000d23ea8 <col:5, col:22> col:9 used result 'int' cinit
-    |           `-BinaryOperator 0x400000d23f80 <col:18, col:22> 'int' '+'
-    |           |   |-ImplicitCastExpr 0x400000d23f50 <col:18> 'int' <LValueToRValue>
-    |           |       `-DeclRefExpr 0x400000d23f10 <col:18> 'int' lvalue Var 0x400000d23d38 'x' 'int'
-    |               `-ImplicitCastExpr 0x400000d23f68 <col:22> 'int' <LValueToRValue>
-    |                   `-DeclRefExpr 0x400000d23f30 <col:22> 'int' lvalue Var 0x400000d23df0 'y' 'int'
-        `-ReturnStmt 0x400000d23ff0 <line:5:5, col:12>
-            `-ImplicitCastExpr 0x400000d23fd8 <col:12> 'int' <LValueToRValue>
-                `-DeclRefExpr 0x400000d23fb8 <col:12> 'int' lvalue Var 0x400000d23ea8 'result' 'int'
+`-FunctionDecl 0x400000d23d50 </app/compiler/tests/parser/test_simple.c:1:1, col:21> col:5 used add 'int (int, int)'
+| |-ParmVarDecl 0x0000400000a1cfc0 <col:9, col:13> col:13 a 'int'
+  `-ParmVarDecl 0x0000400000a1d010 <col:9, col:13> col:13 b 'int'
+`-FunctionDecl 0x400000d23f88 prev 0x400000d23d50 <line:3:1, line:5:1> line:3:5 used add 'int (int, int)'
+  `-CompoundStmt 0x400000d24000 <col:12, line:6:1>
+    `-ReturnStmt 0x400000d23ff0 <line:5:5, col:12>
+      `-BinaryOperator 0x0000400000a1bf20 <col:18, col:22> 'int' '+'
+      | |-DeclRefExpr 0x0000400000a1be60 <col:18> 'int' lvalue Var 0x400000d23d38 'a' 'int'
+        `-DeclRefExpr 0x0000400000a1bec0 <col:18> 'int' lvalue Var 0x400000d23d38 'b' 'int'
+`-FunctionDecl 0x400000d23f88 prev 0x400000d23d50 <line:3:1, line:5:1> line:3:5 used main 'int ()'
+  `-CompoundStmt 0x400000d24000 <col:12, line:6:1>
+  | |-DeclStmt 0x400000d23dc0 <line:2:5, col:15>
+  |   `-VarDecl 0x0000400000a1c380 <col:5, col:13> col:9 used x 'int' cinit
+  |     `-IntegerLiteral 0x0000400000a1c1d0 <col:13> 'int' 10
+  | |-DeclStmt 0x400000d23e78 <line:3:5, col:15>
+  |   `-VarDecl 0x0000400000a1e060 <col:5, col:13> col:9 used y 'int' cinit
+  |     `-IntegerLiteral 0x0000400000a1c420 <col:13> 'int' 5
+  | |-DeclStmt 0x0000400000a1ffe0 <line:10:5, col:13>
+  | | |-VarDecl 0x0000400000a1f460 <col:5, col:13> col:9 used i 'int'
+  |   `-VarDecl 0x0000400000a1f4b0 <col:5, col:13> col:9 used j 'int'
+  | |-DeclStmt 0x400000d23fa0 <line:4:5, col:23>
+  |   `-VarDecl 0x0000400000a1d880 <col:5, col:22> col:9 used result 'int' cinit
+  |     `-IntegerLiteral 0x0000400000a1d820 <col:13> 'int' 0
+  | |-IfStmt 0x0000400000a20080 <line:13:5, line:17:5> has_else
+  | |-WhileStmt 0x0000400000a200d0 <line:19:5, line:22:5>
+  | |-ForStmt 0x0000400000a20120 <line:24:5, line:26:5>
+    `-ReturnStmt 0x400000d23ff0 <line:5:5, col:12>
+      `-DeclRefExpr 0x0000400000a21060 <col:12> 'int' lvalue Var 0x400000d23ea8 'result' 'int'
