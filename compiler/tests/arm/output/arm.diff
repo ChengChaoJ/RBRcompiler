@@ -1,5 +1,5 @@
---- /app/compiler/tests/arm/output/bisheng_arm.s	2025-10-01 14:30:47.460582300 +0000
-+++ /app/compiler/tests/arm/output/RBF_arm.s	2025-10-01 14:30:46.684936900 +0000
+--- /app/compiler/tests/arm/output/bisheng_arm.s	2025-10-15 08:37:00.317745400 +0000
++++ /app/compiler/tests/arm/output/RBF_arm.s	2025-10-15 08:36:59.544945100 +0000
 @@ -1,9 +1,9 @@
  	.text
  	.file	"test_simple.c"

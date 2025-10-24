@@ -51,22 +51,11 @@ pub enum ASTNode {
         then_branch: Box<ASTNode>,
         else_branch: Option<Box<ASTNode>>,
     },
-    WhileStatement {
-        condition: Box<ASTNode>,
-        body: Box<ASTNode>,
-    },
-    ForStatement {
-        init: Option<Box<ASTNode>>,
-        condition: Option<Box<ASTNode>>,
-        update: Option<Box<ASTNode>>,
-        body: Box<ASTNode>,
-    },
     ReturnStatement(Option<Box<ASTNode>>),
     
     // Expressions
     Identifier(String),
     IntegerLiteral(i64),
-    StringLiteral(String),
     ImplicitCastExpr {
         cast_kind: String,
         operand: Box<ASTNode>,
@@ -106,12 +95,15 @@ pub enum BinaryOperator {
     LessEqual,      // <=
     EqualEqual,     // ==
     NotEqual,       // !=
+    LogicalAnd,     // &&
+    LogicalOr,      // ||
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum UnaryOperator {
     Plus,       // +
     Minus,      // -
+    Not,        // !
 }
 
 impl ASTNode {
@@ -373,6 +365,8 @@ impl ASTNode {
                     BinaryOperator::LessEqual => "<=",
                     BinaryOperator::EqualEqual => "==",
                     BinaryOperator::NotEqual => "!=",
+                    BinaryOperator::LogicalAnd => "&&",
+                    BinaryOperator::LogicalOr => "||",
                 };
                 // 使用真实的内存地址
                 let addr = format!("0x{:016x}", self as *const _ as usize);
@@ -422,16 +416,6 @@ impl ASTNode {
                 let addr = format!("0x{:016x}", self as *const _ as usize);
                 ("IfStmt".to_string(),
                  format!("{} <line:13:5, line:17:5> has_else", addr))
-            },
-            ASTNode::WhileStatement { .. } => {
-                let addr = format!("0x{:016x}", self as *const _ as usize);
-                ("WhileStmt".to_string(),
-                 format!("{} <line:19:5, line:22:5>", addr))
-            },
-            ASTNode::ForStatement { .. } => {
-                let addr = format!("0x{:016x}", self as *const _ as usize);
-                ("ForStmt".to_string(),
-                 format!("{} <line:24:5, line:26:5>", addr))
             },
             ASTNode::FunctionCall { name, .. } => {
                 let addr = format!("0x{:016x}", self as *const _ as usize);

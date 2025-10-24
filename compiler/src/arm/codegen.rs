@@ -1,318 +1,143 @@
-use crate::ir::function::IRFunction;
-use crate::ir::basic_block::BasicBlock;
-use crate::ir::instruction::IRInstruction;
-use super::register::RegisterAllocator;
+use inkwell::module::Module;
+use inkwell::targets::{InitializationConfig, Target, TargetTriple};
+use inkwell::OptimizationLevel;
+use std::path::Path;
+use std::process::Command;
 
-pub struct ArmCodegen {
-    register_allocator: RegisterAllocator,
-    label_counter: usize,
-    temp_counter: usize,
-}
+/// ARM 后端 - 封装 ARM 架构的 LLVM 后端逻辑
+pub struct ArmBackend;
 
-impl ArmCodegen {
-    pub fn new() -> Self {
-        Self {
-            register_allocator: RegisterAllocator::new(),
-            label_counter: 0,
-            temp_counter: 0,
-        }
-    }
+impl ArmBackend {
+    /// 执行从 LLVM IR 到最终可执行文件的编译和链接
+    pub fn compile_and_link(module: &Module, output_path: &Path) -> Result<(), String> {
+        // --- 1. 初始化和配置目标机器 ---
+        
+        // 初始化所有目标
+        Target::initialize_all(&InitializationConfig::default());
 
-    pub fn generate(&mut self, funcs: &[IRFunction]) -> String {
-        let mut output = String::new();
-        
-        // 生成汇编头部 - 完全模仿bisheng格式
-        output.push_str("\t.text\n");
-        output.push_str("\t.file\t\"test_simple.c\"\n");
-        
-        // 生成每个函数
-        for (i, func) in funcs.iter().enumerate() {
-            output.push_str(&self.generate_function(func, i));
-            output.push_str("\n");
-        }
-        
-        // 生成尾部信息 - 完全模仿bisheng格式
-        output.push_str("\t.ident\t\"BiSheng Enterprise 4.2.0.2.B002 clang version 17.0.6 (2261d9fde4e0)\"\n");
-        output.push_str("\t.section\t\".note.GNU-stack\",\"\",@progbits\n");
-        output.push_str("\t.addrsig\n");
-        output.push_str("\t.addrsig_sym add\n");
-        
-        output
-    }
-
-    fn generate_function(&mut self, func: &IRFunction, func_index: usize) -> String {
-        let mut output = String::new();
-        
-        // 函数头部 - 完全模仿bisheng格式
-        output.push_str(&format!("\t.globl\t{}\t\t\t\t\t// -- Begin function {}\n", func.name, func.name));
-        output.push_str("\t.p2align\t2\n");
-        output.push_str(&format!("\t.type\t{},@function\n", func.name));
-        output.push_str(&format!("{}:\t\t\t\t\t\t\t\t// @{}\n", func.name, func.name));
-        output.push_str("\t.cfi_startproc\n");
-        output.push_str("// %bb.0:\n");
-        
-        // 特殊处理add函数 - 直接匹配bisheng的简洁输出
-        if func.name == "add" {
-            output.push_str("\tsub\tsp, sp, #16\n");
-            output.push_str("\t.cfi_def_cfa_offset 16\n");
-            output.push_str("\tstr\tw0, [sp, #12]\n");
-            output.push_str("\tstr\tw1, [sp, #8]\n");
-            output.push_str("\tldr\tw8, [sp, #12]\n");
-            output.push_str("\tldr\tw9, [sp, #8]\n");
-            output.push_str("\tadd\tw0, w8, w9\n");
-            output.push_str("\tadd\tsp, sp, #16\n");
-            output.push_str("\t.cfi_def_cfa_offset 0\n");
-            output.push_str("\tret\n");
-            output.push_str(&format!(".Lfunc_end{}:\n", func_index));
-            output.push_str(&format!("\t.size\t{}, .Lfunc_end{}-{}\n", func.name, func_index, func.name));
-            output.push_str("\t.cfi_endproc\n");
-            output.push_str("                                        // -- End function\n");
-            return output;
-        }
-        
-        // 计算栈空间大小 - 精确匹配bisheng模式
-        let var_count = self.count_variables(func);
-        let stack_size = if func.name == "main" { 32 } else { 16 }; // main函数使用32字节，其他函数16字节
-        output.push_str(&format!("\tsub\tsp, sp, #{}\n", stack_size));
-        output.push_str(&format!("\t.cfi_def_cfa_offset {}\n", stack_size));
-        
-        // 特殊处理main函数 - 添加帧指针管理
-        if func.name == "main" {
-            output.push_str("\tstp\tx29, x30, [sp, #16]             // 16-byte Folded Spill\n");
-            output.push_str("\tadd\tx29, sp, #16\n");
-            output.push_str("\t.cfi_def_cfa w29, 16\n");
-            output.push_str("\t.cfi_offset w30, -8\n");
-            output.push_str("\t.cfi_offset w29, -16\n");
-            output.push_str("\tstur\twzr, [x29, #-4]\n");
+        // 创建目标三元组 - 根据当前系统架构选择
+        let target_triple = if cfg!(target_arch = "aarch64") {
+            "aarch64-unknown-linux-gnu"
+        } else if cfg!(target_arch = "x86_64") {
+            "x86_64-unknown-linux-gnu"
+        } else if cfg!(target_arch = "arm") {
+            "arm-unknown-linux-gnueabihf"
         } else {
-            // 初始化第一个变量为0 - 匹配bisheng模式
-            if var_count > 0 {
-                output.push_str(&format!("\tstr\twzr, [sp, #{}]\n", stack_size - 4));
-            }
-        }
+            "x86_64-unknown-linux-gnu" // 默认使用x86_64
+        };
         
-        // 处理函数参数 - 保存到栈
-        for (i, param) in func.parameters.iter().enumerate() {
-            if i < 8 { // ARM64有8个参数寄存器 w0-w7
-                // 为参数分配栈地址 - 匹配bisheng模式
-                let stack_addr = if i == 0 {
-                    "[sp, #12]".to_string()  // 第一个参数
-                } else if i == 1 {
-                    "[sp, #8]".to_string()   // 第二个参数
-                } else {
-                    format!("[sp, #{}]", stack_size - 8 - (i * 4))
-                };
-                output.push_str(&format!("\tstr\tw{}, {}\n", i, stack_addr));
-                self.register_allocator.allocate_specific_register(param, &stack_addr);
-            }
-        }
+        let triple = TargetTriple::create(target_triple);
         
-        // 生成基本块
-        for block in &func.blocks {
-            output.push_str(&self.generate_basic_block(block));
-        }
+        // 获取 ARM 目标
+        let target = Target::from_triple(&triple)
+            .map_err(|e| format!("Failed to create ARM target: {}", e))?;
         
-        // 函数尾声
-        if func.name == "main" {
-            output.push_str("\t.cfi_def_cfa wsp, 32\n");
-            output.push_str("\tldp\tx29, x30, [sp, #16]             // 16-byte Folded Reload\n");
-            output.push_str("\tadd\tsp, sp, #32\n");
-            output.push_str("\t.cfi_def_cfa_offset 0\n");
-            output.push_str("\t.cfi_restore w30\n");
-            output.push_str("\t.cfi_restore w29\n");
-            output.push_str("\tret\n");
+        // 创建目标机器
+        let target_machine = target
+            .create_target_machine(
+                &triple,
+                "generic", // CPU name
+                "",        // Features
+                OptimizationLevel::Default, // 优化级别
+                inkwell::targets::RelocMode::Default,
+                inkwell::targets::CodeModel::Default,
+            )
+            .ok_or_else(|| "Failed to create target machine".to_string())?;
+
+        // --- 2. 验证模块 ---
+        if let Err(validation_error) = module.verify() {
+            return Err(format!("LLVM module validation failed: {}", validation_error));
+        }
+
+        // --- 3. 生成目标文件 (.o) ---
+        let obj_file_path = output_path.with_extension("o");
+        target_machine
+            .write_to_file(
+                module,
+                inkwell::targets::FileType::Object,
+                &obj_file_path,
+            )
+            .map_err(|e| format!("Failed to write object file: {:?}", e))?;
+
+        println!("ARM Object file created at: {:?}", obj_file_path);
+
+        // --- 4. 链接 ---
+        
+        // 使用系统链接器
+        let linker = "gcc";
+        
+        let status = Command::new(linker)
+            .arg(&obj_file_path)
+            .arg("-o")
+            .arg(output_path)
+            .arg("-static") // 静态链接
+            .status()
+            .map_err(|e| format!("Failed to execute linker {}: {}", linker, e))?;
+
+        if status.success() {
+            println!("Successfully linked executable: {:?}", output_path);
+            Ok(())
         } else {
-            output.push_str(&format!("\tadd\tsp, sp, #{}\n", stack_size));
-            output.push_str("\t.cfi_def_cfa_offset 0\n");
-            output.push_str("\tret\n");
-        }
-        output.push_str(&format!(".Lfunc_end{}:\n", func_index));
-        output.push_str(&format!("\t.size\t{}, .Lfunc_end{}-{}\n", func.name, func_index, func.name));
-        output.push_str("\t.cfi_endproc\n");
-        output.push_str("                                        // -- End function\n");
-        
-        output
-    }
-
-    fn generate_basic_block(&mut self, block: &BasicBlock) -> String {
-        let mut output = String::new();
-        
-        // 不生成基本块标签，匹配bisheng模式
-        
-        // 生成指令
-        for instruction in &block.instructions {
-            output.push_str(&self.generate_instruction(instruction));
-        }
-        
-        output
-    }
-
-    fn generate_instruction(&mut self, instruction: &IRInstruction) -> String {
-        match instruction {
-            IRInstruction::Add { dst, src1, src2 } => {
-                let src1_addr = self.get_or_allocate_register(src1);
-                let src2_addr = self.get_or_allocate_register(src2);
-                let dst_addr = self.allocate_register(dst);
-                format!("\tldr\tw8, {}\n\tldr\tw9, {}\n\tadd\tw8, w8, w9\n\tstr\tw8, {}\n", src1_addr, src2_addr, dst_addr)
-            }
-            IRInstruction::Sub { dst, src1, src2 } => {
-                let src1_addr = self.get_or_allocate_register(src1);
-                let src2_addr = self.get_or_allocate_register(src2);
-                let dst_addr = self.allocate_register(dst);
-                format!("\tldr\tw8, {}\n\tldr\tw9, {}\n\tsub\tw8, w8, w9\n\tstr\tw8, {}\n", src1_addr, src2_addr, dst_addr)
-            }
-            IRInstruction::Mul { dst, src1, src2 } => {
-                let src1_addr = self.get_or_allocate_register(src1);
-                let src2_addr = self.get_or_allocate_register(src2);
-                let dst_addr = self.allocate_register(dst);
-                format!("\tldr\tw8, {}\n\tldr\tw9, {}\n\tmul\tw8, w8, w9\n\tstr\tw8, {}\n", src1_addr, src2_addr, dst_addr)
-            }
-            IRInstruction::Div { dst, src1, src2 } => {
-                let src1_addr = self.get_or_allocate_register(src1);
-                let src2_addr = self.get_or_allocate_register(src2);
-                let dst_addr = self.allocate_register(dst);
-                format!("\tldr\tw8, {}\n\tldr\tw9, {}\n\tsdiv\tw8, w8, w9\n\tstr\tw8, {}\n", src1_addr, src2_addr, dst_addr)
-            }
-            IRInstruction::CmpGt { dst, src1, src2 } => {
-                let reg1 = self.get_register(src1);
-                let reg2 = self.get_register(src2);
-                let dst_reg = self.allocate_register(dst);
-                format!("\tcmp\t{}, {}\n\tcset\t{}, gt\n", reg1, reg2, dst_reg)
-            }
-            IRInstruction::CmpLt { dst, src1, src2 } => {
-                let reg1 = self.get_register(src1);
-                let reg2 = self.get_register(src2);
-                let dst_reg = self.allocate_register(dst);
-                format!("\tcmp\t{}, {}\n\tcset\t{}, lt\n", reg1, reg2, dst_reg)
-            }
-            IRInstruction::CmpEq { dst, src1, src2 } => {
-                let reg1 = self.get_register(src1);
-                let reg2 = self.get_register(src2);
-                let dst_reg = self.allocate_register(dst);
-                format!("\tcmp\t{}, {}\n\tcset\t{}, eq\n", reg1, reg2, dst_reg)
-            }
-            IRInstruction::LoadConst { dst, value } => {
-                let dst_addr = self.allocate_register(dst);
-                format!("\tmov\tw8, #{}\t\t\t\t\t// =0x{:x}\n\tstr\tw8, {}\n", value, value, dst_addr)
-            }
-            IRInstruction::Load { dst, addr } => {
-                let dst_reg = self.allocate_register(dst);
-                let addr_reg = self.get_register(addr);
-                format!("\tldr\t{}, [{}]\n", dst_reg, addr_reg)
-            }
-            IRInstruction::Store { addr, src } => {
-                let addr_reg = self.get_register(addr);
-                let src_reg = self.get_register(src);
-                format!("\tstr\t{}, [{}]\n", src_reg, addr_reg)
-            }
-            IRInstruction::Alloca { dst, size } => {
-                let dst_reg = self.allocate_register(dst);
-                format!("\tadd\t{}, sp, #{}\n", dst_reg, -(*size as i32))
-            }
-            IRInstruction::Jump { target } => {
-                format!("\tb\t{}\n", target)
-            }
-            IRInstruction::JumpIf { condition, target } => {
-                let cond_reg = self.get_register(condition);
-                format!("\ttbnz\t{}, #0, {}\n", cond_reg, target)
-            }
-            IRInstruction::JumpIfNot { condition, target } => {
-                let cond_reg = self.get_register(condition);
-                format!("\ttbz\t{}, #0, {}\n", cond_reg, target)
-            }
-            IRInstruction::Call { dst, func, args } => {
-                let mut output = String::new();
-                
-                // 设置参数
-                for (i, arg) in args.iter().enumerate() {
-                    if i < 8 {
-                        let arg_addr = self.get_register(arg);
-                        output.push_str(&format!("\tldr\tw{}, {}\n", i, arg_addr));
-                    }
-                }
-                
-                // 调用函数
-                output.push_str(&format!("\tbl\t{}\n", func));
-                
-                // 保存返回值
-                if let Some(dst) = dst {
-                    let dst_addr = self.allocate_register(dst);
-                    output.push_str(&format!("\tstr\tw0, {}\n", dst_addr));
-                }
-                
-                output
-            }
-            IRInstruction::Ret { value } => {
-                if let Some(value) = value {
-                    let value_addr = self.get_register(value);
-                    format!("\tldr\tw0, {}\n", value_addr)
-                } else {
-                    String::new()
-                }
-            }
-            IRInstruction::Move { dst, src } => {
-                let dst_addr = self.allocate_register(dst);
-                let src_addr = self.get_or_allocate_register(src);
-                format!("\tldr\tw8, {}\n\tstr\tw8, {}\n", src_addr, dst_addr)
-            }
-            IRInstruction::Label { name } => {
-                format!(".{}:\n", name)
-            }
-            IRInstruction::Nop => {
-                "\tnop\n".to_string()
-            }
-            _ => {
-                format!("\t# 未实现的指令: {:?}\n", instruction)
-            }
+            Err(format!("Linking failed. Linker status: {:?}", status))
         }
     }
+    
+    /// 生成 ARM 汇编代码（不链接）
+    pub fn generate_assembly(module: &Module) -> Result<String, String> {
+        // 初始化所有目标
+        Target::initialize_all(&InitializationConfig::default());
 
-    fn get_register(&self, var: &str) -> String {
-        self.register_allocator.get_register(var)
-    }
-
-    fn allocate_register(&mut self, var: &str) -> String {
-        self.register_allocator.allocate_register(var)
-    }
-
-    fn get_or_allocate_register(&mut self, var: &str) -> String {
-        if self.register_allocator.is_allocated(var) {
-            self.register_allocator.get_register(var)
+        // 创建目标三元组 - 根据当前系统架构选择
+        let target_triple = if cfg!(target_arch = "aarch64") {
+            "aarch64-unknown-linux-gnu"
+        } else if cfg!(target_arch = "x86_64") {
+            "x86_64-unknown-linux-gnu"
+        } else if cfg!(target_arch = "arm") {
+            "arm-unknown-linux-gnueabihf"
         } else {
-            self.register_allocator.allocate_register(var)
-        }
-    }
+            "x86_64-unknown-linux-gnu" // 默认使用x86_64
+        };
+        
+        let triple = TargetTriple::create(target_triple);
+        
+        // 获取 ARM 目标
+        let target = Target::from_triple(&triple)
+            .map_err(|e| format!("Failed to create ARM target: {}", e))?;
+        
+        // 创建目标机器
+        let target_machine = target
+            .create_target_machine(
+                &triple,
+                "generic",
+                "",
+                OptimizationLevel::Default,
+                inkwell::targets::RelocMode::Default,
+                inkwell::targets::CodeModel::Default,
+            )
+            .ok_or_else(|| "Failed to create target machine".to_string())?;
 
-    fn count_variables(&self, func: &IRFunction) -> usize {
-        let mut variables = std::collections::HashSet::new();
-        
-        for block in &func.blocks {
-            for instruction in &block.instructions {
-                match instruction {
-                    IRInstruction::Add { dst, .. } |
-                    IRInstruction::Sub { dst, .. } |
-                    IRInstruction::Mul { dst, .. } |
-                    IRInstruction::Div { dst, .. } |
-                    IRInstruction::Cmp { dst, .. } |
-                    IRInstruction::CmpEq { dst, .. } |
-                    IRInstruction::CmpNe { dst, .. } |
-                    IRInstruction::CmpLt { dst, .. } |
-                    IRInstruction::CmpLe { dst, .. } |
-                    IRInstruction::CmpGt { dst, .. } |
-                    IRInstruction::CmpGe { dst, .. } |
-                    IRInstruction::Load { dst, .. } |
-                    IRInstruction::Alloca { dst, .. } |
-                    IRInstruction::Call { dst: Some(dst), .. } |
-                    IRInstruction::Move { dst, .. } |
-                    IRInstruction::LoadConst { dst, .. } |
-                    IRInstruction::LoadString { dst, .. } => {
-                        variables.insert(dst.clone());
-                    }
-                    _ => {}
-                }
-            }
+        // 验证模块
+        if let Err(validation_error) = module.verify() {
+            return Err(format!("LLVM module validation failed: {}", validation_error));
         }
-        
-        variables.len()
+
+        // 生成汇编代码到临时文件
+        let temp_asm_path = std::env::temp_dir().join("temp_assembly.s");
+        target_machine
+            .write_to_file(
+                module,
+                inkwell::targets::FileType::Assembly,
+                &temp_asm_path,
+            )
+            .map_err(|e| format!("Failed to generate assembly: {:?}", e))?;
+
+        // 读取生成的汇编文件内容
+        let assembly = std::fs::read_to_string(&temp_asm_path)
+            .map_err(|e| format!("Failed to read assembly file: {}", e))?;
+
+        // 清理临时文件
+        let _ = std::fs::remove_file(&temp_asm_path);
+
+        Ok(assembly)
     }
 }

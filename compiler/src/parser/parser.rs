@@ -136,10 +136,6 @@ impl Parser {
     fn statement(&mut self) -> Result<ASTNode, CompileError> {
         if self.check_keyword("if") {
             self.if_statement()
-        } else if self.check_keyword("while") {
-            self.while_statement()
-        } else if self.check_keyword("for") {
-            self.for_statement()
         } else if self.check_keyword("return") {
             self.return_statement()
         } else {
@@ -188,89 +184,6 @@ impl Parser {
 
 
 
-    fn while_statement(&mut self) -> Result<ASTNode, CompileError> {
-        self.advance(); // consume 'while'
-        self.consume(Token::LeftParen, "Expected '(' after 'while'")?;
-        let condition = self.expression()?;
-        self.consume(Token::RightParen, "Expected ')' after while condition")?;
-        
-        // 处理body
-        let body = if self.check(&Token::LeftBrace) {
-            self.advance(); // consume '{'
-            self.block()?
-        } else {
-            self.expression_statement()?
-        };
-        
-        Ok(ASTNode::WhileStatement {
-            condition: Box::new(condition),
-            body: Box::new(body),
-        })
-    }
-
-    fn for_statement(&mut self) -> Result<ASTNode, CompileError> {
-        self.advance(); // consume 'for'
-        self.consume(Token::LeftParen, "Expected '(' after 'for'")?;
-        
-        let init = if self.check(&Token::Semicolon) {
-            self.advance();
-            None
-        } else if self.check_keyword("int") || self.check_keyword("float") || self.check_keyword("char") || self.check_keyword("void") {
-            // 处理for循环中的变量声明
-            let type_name = self.consume_type()?;
-            let name = self.consume_identifier()?;
-            let initializer = if self.match_token(&Token::Assign) {
-                Some(self.expression()?)
-            } else {
-                None
-            };
-            // 消耗分号
-            self.consume(Token::Semicolon, "Expected ';' after for init declaration")?;
-            Some(ASTNode::DeclStmt(Box::new(ASTNode::VariableDeclaration {
-                type_name,
-                name,
-                initializer: initializer.map(Box::new),
-            })))
-        } else {
-            let expr = Some(self.expression()?);
-            // 消耗分号
-            self.consume(Token::Semicolon, "Expected ';' after for init expression")?;
-            expr
-        };
-        
-        let condition = if self.check(&Token::Semicolon) {
-            self.advance();
-            None
-        } else {
-            let expr = Some(self.expression()?);
-            // 消耗分号
-            self.consume(Token::Semicolon, "Expected ';' after for condition")?;
-            expr
-        };
-        
-        let update = if self.check(&Token::RightParen) {
-            None
-        } else {
-            Some(self.expression()?)
-        };
-        
-        self.consume(Token::RightParen, &format!("Expected ')' after for clauses, got: {:?}", self.peek()))?;
-        
-        // 处理body
-        let body = if self.check(&Token::LeftBrace) {
-            self.advance(); // consume '{'
-            self.block()?
-        } else {
-            self.expression_statement()?
-        };
-        
-        Ok(ASTNode::ForStatement {
-            init: init.map(Box::new),
-            condition: condition.map(Box::new),
-            update: update.map(Box::new),
-            body: Box::new(body),
-        })
-    }
 
     fn return_statement(&mut self) -> Result<ASTNode, CompileError> {
         self.advance(); // consume 'return'

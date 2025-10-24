@@ -1,6 +1,5 @@
 use super::token::{Token, TokenWithInfo};
 use super::keywords::c_keywords;
-use crate::error::error::LexerError;
 
 pub struct Lexer {
     pub input: Vec<char>,
@@ -192,8 +191,29 @@ impl Lexer {
                     self.column += 1;
                     Ok(Token::NotEqual)
                 } else {
-                    Err(format!("Unexpected character '{}' at line {}, column {}", 
-                               ch, self.line, self.column))
+                    Ok(Token::Not)
+                }
+            }
+            '&' => {
+                self.position += 1;
+                self.column += 1;
+                if self.position < self.input.len() && self.input[self.position] == '&' {
+                    self.position += 1;
+                    self.column += 1;
+                    Ok(Token::LogicalAnd)
+                } else {
+                    Err(format!("Unexpected character '&' at line {}, column {}", self.line, self.column))
+                }
+            }
+            '|' => {
+                self.position += 1;
+                self.column += 1;
+                if self.position < self.input.len() && self.input[self.position] == '|' {
+                    self.position += 1;
+                    self.column += 1;
+                    Ok(Token::LogicalOr)
+                } else {
+                    Err(format!("Unexpected character '|' at line {}, column {}", self.line, self.column))
                 }
             }
             ';' => {
@@ -317,7 +337,29 @@ impl Lexer {
                     self.column += 1;
                     Token::NotEqual
                 } else {
-                    return Err(LexerError::UnexpectedCharacter(ch, self.line, self.column).to_string());
+                    Token::Not
+                }
+            }
+            '&' => {
+                self.position += 1;
+                self.column += 1;
+                if self.position < self.input.len() && self.input[self.position] == '&' {
+                    self.position += 1;
+                    self.column += 1;
+                    Token::LogicalAnd
+                } else {
+                    return Err(format!("Unexpected character '&' at line {}, column {}", line, column));
+                }
+            }
+            '|' => {
+                self.position += 1;
+                self.column += 1;
+                if self.position < self.input.len() && self.input[self.position] == '|' {
+                    self.position += 1;
+                    self.column += 1;
+                    Token::LogicalOr
+                } else {
+                    return Err(format!("Unexpected character '|' at line {}, column {}", line, column));
                 }
             }
             ';' => {

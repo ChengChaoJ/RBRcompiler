@@ -20,6 +20,8 @@ TEST_FILES=(
     "test_functions.c" 
     "test_expressions.c"
     "test_control_flow.c"
+    "test_logic.c"
+    "test_simple_if.c"
 )
 
 echo "开始运行IR生成测试..."
@@ -38,9 +40,11 @@ for test_file in "${TEST_FILES[@]}"; do
     echo "Bisheng输出: $BISHENG_OUTPUT"
     
     # 运行RBF编译器
-    echo "运行RBF编译器..."
-    cd "$COMPILER_DIR"
-    cargo run -- --emit-ir "$TEST_PATH" > "$RBF_OUTPUT" 2>&1
+        echo "运行RBF编译器..."
+        cd "$COMPILER_DIR"
+        # 仅将程序的标准输出写入 RBF 输出文件，抑制 cargo/rustc 的编译警告和 cargo 日志
+        # 使用 --quiet 抑制 cargo 自身的输出，且将标准错误重定向到 /dev/null，保证输出文件只包含程序输出的 IR
+        cargo run --quiet -- --emit-ir "$TEST_PATH" > "$RBF_OUTPUT" 2>/dev/null
     
     # 运行bisheng编译器获取IR输出
     echo "运行bisheng编译器..."
