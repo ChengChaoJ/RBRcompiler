@@ -347,17 +347,21 @@ impl<'ctx> IRGenerator<'ctx> {
             // 生成 then 分支
             self.builder.set_insert_point(then_block);
             self.generate_block(then_branch)?;
-            // 只有在 then 块没有被 return 终止时，才跳转到 merge 块
-            if then_block.get_terminator().is_none() {
-                self.builder.build_br(merge_block);
+            // 检查当前插入点的基本块是否有终止指令
+            if let Some(current_block) = self.builder.builder.get_insert_block() {
+                if current_block.get_terminator().is_none() {
+                    self.builder.build_br(merge_block);
+                }
             }
             
             // 生成 else 分支
             self.builder.set_insert_point(else_block);
             self.generate_block(else_branch.as_ref().unwrap())?;
-            // 只有在 else 块没有被 return 终止时，才跳转到 merge 块
-            if else_block.get_terminator().is_none() {
-                self.builder.build_br(merge_block);
+            // 检查当前插入点的基本块是否有终止指令
+            if let Some(current_block) = self.builder.builder.get_insert_block() {
+                if current_block.get_terminator().is_none() {
+                    self.builder.build_br(merge_block);
+                }
             }
             
             // 设置插入点到合并块
@@ -372,7 +376,12 @@ impl<'ctx> IRGenerator<'ctx> {
             // 生成 then 分支
             self.builder.set_insert_point(then_block);
             self.generate_block(then_branch)?;
-            self.builder.build_br(after_block);
+            // 检查当前插入点的基本块是否有终止指令
+            if let Some(current_block) = self.builder.builder.get_insert_block() {
+                if current_block.get_terminator().is_none() {
+                    self.builder.build_br(after_block);
+                }
+            }
             
             // 设置插入点到 after 块
             self.builder.set_insert_point(after_block);

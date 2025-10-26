@@ -10,6 +10,7 @@ mod semantic;
 mod bisheng;
 mod ir;
 mod arm;
+mod assm;
 mod error;
 mod utils;
 
@@ -44,6 +45,10 @@ struct Cli {
     /// Compile to ARM executable
     #[arg(long)]
     compile_arm: bool,
+
+    /// Emit assembly using custom backend
+    #[arg(long)]
+    emit_assm: bool,
 
     /// Output file (token 输出，默认 stdout)
     #[arg(short, long)]
@@ -237,6 +242,42 @@ fn main() -> Result<()> {
             .map_err(|e| Error::msg(e))?;
         
         println!("ARM executable created: {:?}", output_path);
+        return Ok(());
+    }
+
+    // 处理自定义汇编后端输出
+    if cli.emit_assm {
+        let ast = parser::parse(&source_code).map_err(|e| Error::msg(e))?;
+        
+        // 先进行语义分析
+        let mut analyzer = semantic::analyzer::SemanticAnalyzer::new();
+        let semantic_errors = analyzer.analyze(&ast);
+        
+        // 如果有语义错误，输出错误信息
+        if !semantic_errors.is_empty() {
+            for error in semantic_errors {
+                println!("{}", error);
+            }
+            return Ok(());
+        }
+        
+        // 从AST生成IR
+        let context = inkwell::context::Context::create();
+        let mut ir_generator = ir::generator::IRGenerator::new(&context, "main");
+        let ir_module = ir_generator.generate(&ast).map_err(|e| Error::msg(e))?;
+        
+        // 使用自定义汇编后端生成汇编代码
+        let mut assm_generator = assm::AssemblyCodegenV2::new();
+        let assm_output = assm_generator.generate_from_module(&ir_module)
+            .map_err(|e| Error::msg(e))?;
+        
+        if let Some(output_file) = cli.output {
+            fs::write(&output_file, assm_output)
+                .with_context(|| format!("Failed to write assembly file: {}", output_file))?;
+            println!("Assembly written to: {}", output_file);
+        } else {
+            print!("{}", assm_output);
+        }
         return Ok(());
     }
     

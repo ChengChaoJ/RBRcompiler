@@ -132,7 +132,9 @@ impl<'ctx> IRBuilder<'ctx> {
 
     // 一元运算符
     pub fn build_not(&self, value: IntValue<'ctx>) -> IntValue<'ctx> {
-        self.builder.build_not(value, "not").unwrap()
+        // 逻辑非：!x = (x == 0) ? 1 : 0
+        // 实现为：icmp eq x, 0
+        self.builder.build_int_compare(inkwell::IntPredicate::EQ, value, self.i32_type.const_int(0, false), "not").unwrap()
     }
 
     pub fn build_neg(&self, value: IntValue<'ctx>) -> IntValue<'ctx> {

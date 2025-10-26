@@ -292,9 +292,13 @@ impl Lexer {
                 Token::Multiply
             }
             '/' => {
-                self.position += 1;
-                self.column += 1;
-                Token::Divide
+                if self.position + 1 < self.input.len() && self.input[self.position + 1] == '/' {
+                    self.read_line_comment()?
+                } else {
+                    self.position += 1;
+                    self.column += 1;
+                    Token::Divide
+                }
             }
             '=' => {
                 self.position += 1;
