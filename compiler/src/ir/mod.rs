@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 pub mod generator;
 pub mod builder;
 
@@ -29,8 +28,3 @@ impl<'ctx> CodeGen<'ctx> {
         }
     }
 }
-=======
-pub mod instruction;
-pub mod basic_block;
-pub mod function; 
->>>>>>> upstream/main

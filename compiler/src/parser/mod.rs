@@ -1,5 +1,4 @@
 pub mod ast;
-<<<<<<< HEAD
 pub mod precedence;
 
 // LALRPOP生成的grammar模块
@@ -14,7 +13,3 @@ pub fn parse(input: &str) -> Result<ast::ASTNode, CompileError> {
         Err(e) => Err(CompileError::Parse(format!("Parse error: {}", e))),
     }
 } 
-=======
-pub mod parser;
-pub mod precedence; 
->>>>>>> upstream/main
