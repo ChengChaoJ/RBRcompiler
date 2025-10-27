@@ -324,14 +324,7 @@ is_sorted:                              // @is_sorted
 	.size	is_sorted, .Lfunc_end5-is_sorted
 	.cfi_endproc
                                         // -- End function
-	.section	.rodata.cst8,"aM",@progbits,8
-	.p2align	3, 0x0                          // -- Begin function main
-.LCPI6_0:
-	.xword	0x408f400000000000              // double 1000
-.LCPI6_1:
-	.xword	0x412e848000000000              // double 1.0E+6
-	.text
-	.globl	main
+	.globl	main                            // -- Begin function main
 	.p2align	2
 	.type	main,@function
 main:                                   // @main
@@ -345,189 +338,42 @@ main:                                   // @main
 	.cfi_offset w28, -16
 	.cfi_offset w30, -24
 	.cfi_offset w29, -32
-	sub	sp, sp, #9, lsl #12             // =36864
-	sub	sp, sp, #3232
-	sub	x9, x29, #60
+	sub	sp, sp, #97, lsl #12            // =397312
+	sub	sp, sp, #2736
+	sub	x9, x29, #16
 	str	x9, [sp, #24]                   // 8-byte Folded Spill
-	str	wzr, [x9, #56]
-	mov	w8, #10000                      // =0x2710
-	str	w8, [sp, #20]                   // 4-byte Folded Spill
-	str	w8, [x9, #52]
+	mov	w1, #34464                      // =0x86a0
+	movk	w1, #1, lsl #16
+	str	w1, [sp, #20]                   // 4-byte Folded Spill
+	mov	w8, wzr
+	str	w8, [sp, #4]                    // 4-byte Folded Spill
+	str	wzr, [x9, #12]
+	str	w1, [x9, #8]
 	mov	x8, sp
-	stur	x8, [x9, #44]
-	adrp	x0, .L.str.2
-	add	x0, x0, :lo12:.L.str.2
-	bl	printf
-	ldr	w1, [sp, #20]                   // 4-byte Folded Reload
-	adrp	x0, .L.str.3
-	add	x0, x0, :lo12:.L.str.3
-	bl	printf
-	ldr	w1, [sp, #20]                   // 4-byte Folded Reload
-	add	x0, sp, #36
-	bl	generate_random_array
-	adrp	x0, .L.str.4
-	add	x0, x0, :lo12:.L.str.4
-	bl	printf
-	adrp	x0, .L.str.5
-	add	x0, x0, :lo12:.L.str.5
-	bl	printf
-	ldr	x8, [sp, #24]                   // 8-byte Folded Reload
-	str	wzr, [x8, #40]
-	b	.LBB6_1
-.LBB6_1:                                // =>This Inner Loop Header: Depth=1
-	ldr	x8, [sp, #24]                   // 8-byte Folded Reload
-	ldr	w8, [x8, #40]
-	subs	w8, w8, #10
-	cset	w8, ge
-	tbnz	w8, #0, .LBB6_4
-	b	.LBB6_2
-.LBB6_2:                                //   in Loop: Header=BB6_1 Depth=1
-	ldr	x8, [sp, #24]                   // 8-byte Folded Reload
-	ldrsw	x9, [x8, #40]
-	add	x8, sp, #36
-	ldr	w1, [x8, x9, lsl #2]
-	adrp	x0, .L.str
-	add	x0, x0, :lo12:.L.str
-	bl	printf
-	b	.LBB6_3
-.LBB6_3:                                //   in Loop: Header=BB6_1 Depth=1
-	ldr	x9, [sp, #24]                   // 8-byte Folded Reload
-	ldr	w8, [x9, #40]
-	add	w8, w8, #1
-	str	w8, [x9, #40]
-	b	.LBB6_1
-.LBB6_4:
-	adrp	x0, .L.str.1
-	add	x0, x0, :lo12:.L.str.1
-	bl	printf
-	bl	clock
-	ldr	x8, [sp, #24]                   // 8-byte Folded Reload
-	stur	x0, [x8, #28]
-	add	x0, sp, #36
+	str	x8, [x9]
+	add	x0, sp, #32
 	str	x0, [sp, #8]                    // 8-byte Folded Spill
-	mov	w1, wzr
-	mov	w2, #9999                       // =0x270f
-	bl	quicksort
-	bl	clock
-	ldr	x8, [sp, #24]                   // 8-byte Folded Reload
-	mov	x9, x0
+	bl	generate_random_array
+	ldr	w1, [sp, #4]                    // 4-byte Folded Reload
 	ldr	x0, [sp, #8]                    // 8-byte Folded Reload
-	stur	x9, [x8, #20]
-	ldur	x9, [x8, #20]
-	ldur	x10, [x8, #28]
-	subs	x9, x9, x10
-	scvtf	d0, x9
-	adrp	x9, .LCPI6_1
-	ldr	d1, [x9, :lo12:.LCPI6_1]
-	fdiv	d0, d0, d1
-	adrp	x9, .LCPI6_0
-	ldr	d1, [x9, :lo12:.LCPI6_0]
-	fmul	d0, d0, d1
-	stur	d0, [x8, #12]
-	mov	w1, #10000                      // =0x2710
+	mov	w2, #34463                      // =0x869f
+	movk	w2, #1, lsl #16
+	bl	quicksort
+	ldr	x0, [sp, #8]                    // 8-byte Folded Reload
+	ldr	w1, [sp, #20]                   // 4-byte Folded Reload
 	bl	is_sorted
-	subs	w8, w0, #0
-	cset	w8, eq
-	tbnz	w8, #0, .LBB6_6
-	b	.LBB6_5
-.LBB6_5:
-	adrp	x0, .L.str.6
-	add	x0, x0, :lo12:.L.str.6
-	bl	printf
 	ldr	x8, [sp, #24]                   // 8-byte Folded Reload
-	ldur	d0, [x8, #12]
-	adrp	x0, .L.str.7
-	add	x0, x0, :lo12:.L.str.7
-	bl	printf
-	b	.LBB6_7
-.LBB6_6:
-	adrp	x0, .L.str.8
-	add	x0, x0, :lo12:.L.str.8
-	bl	printf
-	ldr	x9, [sp, #24]                   // 8-byte Folded Reload
-	mov	w8, #1                          // =0x1
-	str	w8, [x9, #56]
-	str	w8, [x9, #8]
-	b	.LBB6_16
-.LBB6_7:
-	adrp	x0, .L.str.9
-	add	x0, x0, :lo12:.L.str.9
-	bl	printf
-	ldr	x8, [sp, #24]                   // 8-byte Folded Reload
-	str	wzr, [x8, #4]
-	b	.LBB6_8
-.LBB6_8:                                // =>This Inner Loop Header: Depth=1
-	ldr	x8, [sp, #24]                   // 8-byte Folded Reload
-	ldr	w8, [x8, #4]
-	subs	w8, w8, #10
-	cset	w8, ge
-	tbnz	w8, #0, .LBB6_11
-	b	.LBB6_9
-.LBB6_9:                                //   in Loop: Header=BB6_8 Depth=1
-	ldr	x8, [sp, #24]                   // 8-byte Folded Reload
-	ldrsw	x9, [x8, #4]
-	add	x8, sp, #36
-	ldr	w1, [x8, x9, lsl #2]
-	adrp	x0, .L.str
-	add	x0, x0, :lo12:.L.str
-	bl	printf
-	b	.LBB6_10
-.LBB6_10:                               //   in Loop: Header=BB6_8 Depth=1
-	ldr	x9, [sp, #24]                   // 8-byte Folded Reload
-	ldr	w8, [x9, #4]
-	add	w8, w8, #1
-	str	w8, [x9, #4]
-	b	.LBB6_8
-.LBB6_11:
-	adrp	x0, .L.str.1
-	add	x0, x0, :lo12:.L.str.1
-	bl	printf
-	adrp	x0, .L.str.10
-	add	x0, x0, :lo12:.L.str.10
-	bl	printf
-	ldr	x9, [sp, #24]                   // 8-byte Folded Reload
-	mov	w8, #9990                       // =0x2706
-	str	w8, [x9]
-	b	.LBB6_12
-.LBB6_12:                               // =>This Inner Loop Header: Depth=1
-	ldr	x8, [sp, #24]                   // 8-byte Folded Reload
-	ldr	w8, [x8]
-	mov	w9, #10000                      // =0x2710
-	subs	w8, w8, w9
-	cset	w8, ge
-	tbnz	w8, #0, .LBB6_15
-	b	.LBB6_13
-.LBB6_13:                               //   in Loop: Header=BB6_12 Depth=1
-	ldr	x8, [sp, #24]                   // 8-byte Folded Reload
-	ldrsw	x9, [x8]
-	add	x8, sp, #36
-	ldr	w1, [x8, x9, lsl #2]
-	adrp	x0, .L.str
-	add	x0, x0, :lo12:.L.str
-	bl	printf
-	b	.LBB6_14
-.LBB6_14:                               //   in Loop: Header=BB6_12 Depth=1
-	ldr	x9, [sp, #24]                   // 8-byte Folded Reload
-	ldr	w8, [x9]
-	add	w8, w8, #1
-	str	w8, [x9]
-	b	.LBB6_12
-.LBB6_15:
-	adrp	x0, .L.str.1
-	add	x0, x0, :lo12:.L.str.1
-	bl	printf
-	ldr	x9, [sp, #24]                   // 8-byte Folded Reload
-	str	wzr, [x9, #56]
-	mov	w8, #1                          // =0x1
-	str	w8, [x9, #8]
-	b	.LBB6_16
-.LBB6_16:
-	ldr	x8, [sp, #24]                   // 8-byte Folded Reload
-	ldur	x9, [x8, #44]
+	subs	w9, w0, #0
+	cset	w9, ne
+	and	w9, w9, #0x1
+	ands	w9, w9, #0x1
+	cset	w9, eq
+	str	w9, [x8, #12]
+	ldr	x9, [x8]
 	mov	sp, x9
-	ldr	w0, [x8, #56]
-	add	sp, sp, #9, lsl #12             // =36864
-	add	sp, sp, #3232
+	ldr	w0, [x8, #12]
+	add	sp, sp, #97, lsl #12            // =397312
+	add	sp, sp, #2736
 	.cfi_def_cfa wsp, 32
 	ldr	x28, [sp, #16]                  // 8-byte Folded Reload
 	ldp	x29, x30, [sp], #32             // 16-byte Folded Reload
@@ -551,51 +397,6 @@ main:                                   // @main
 	.asciz	"\n"
 	.size	.L.str.1, 2
 
-	.type	.L.str.2,@object                // @.str.2
-.L.str.2:
-	.asciz	"=== \345\277\253\351\200\237\346\216\222\345\272\217\347\256\227\346\263\225\346\265\213\350\257\225 ===\n"
-	.size	.L.str.2, 34
-
-	.type	.L.str.3,@object                // @.str.3
-.L.str.3:
-	.asciz	"\346\225\260\347\273\204\345\244\247\345\260\217: %d\n"
-	.size	.L.str.3, 18
-
-	.type	.L.str.4,@object                // @.str.4
-.L.str.4:
-	.asciz	"\345\216\237\345\247\213\346\225\260\347\273\204\345\267\262\347\224\237\346\210\220\n"
-	.size	.L.str.4, 23
-
-	.type	.L.str.5,@object                // @.str.5
-.L.str.5:
-	.asciz	"\346\216\222\345\272\217\345\211\215\345\211\21510\344\270\252\345\205\203\347\264\240: "
-	.size	.L.str.5, 26
-
-	.type	.L.str.6,@object                // @.str.6
-.L.str.6:
-	.asciz	"\342\234\223 \346\216\222\345\272\217\346\210\220\345\212\237\357\274\201\n"
-	.size	.L.str.6, 21
-
-	.type	.L.str.7,@object                // @.str.7
-.L.str.7:
-	.asciz	"\350\277\220\350\241\214\346\227\266\351\227\264: %.2f \346\257\253\347\247\222\n"
-	.size	.L.str.7, 27
-
-	.type	.L.str.8,@object                // @.str.8
-.L.str.8:
-	.asciz	"\342\234\227 \346\216\222\345\272\217\345\244\261\350\264\245\357\274\201\n"
-	.size	.L.str.8, 21
-
-	.type	.L.str.9,@object                // @.str.9
-.L.str.9:
-	.asciz	"\346\216\222\345\272\217\345\220\216\345\211\21510\344\270\252\345\205\203\347\264\240: "
-	.size	.L.str.9, 26
-
-	.type	.L.str.10,@object               // @.str.10
-.L.str.10:
-	.asciz	"\346\216\222\345\272\217\345\220\216\345\220\21610\344\270\252\345\205\203\347\264\240: "
-	.size	.L.str.10, 26
-
 	.ident	"BiSheng Enterprise 4.2.0.2.B002 clang version 17.0.6 (2261d9fde4e0)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
@@ -608,4 +409,3 @@ main:                                   // @main
 	.addrsig_sym time
 	.addrsig_sym rand
 	.addrsig_sym is_sorted
-	.addrsig_sym clock

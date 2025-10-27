@@ -84,7 +84,7 @@ impl AssemblyCodegenV2 {
         // 遍历模块中的每个函数（生成所有函数，不只是 main）
         for function in module.get_functions() {
             if let Some(_func_name) = function.get_name().to_str().ok() {
-                assembly.push_str(&self.generate_function(&function)?);
+                    assembly.push_str(&self.generate_function(&function)?);
             }
         }
 
@@ -149,7 +149,7 @@ impl AssemblyCodegenV2 {
         let func_end_label = format!(".Lfunc_end{}", self.function_counter);
         assembly.push_str(&format!("{}:\n", func_end_label));
         assembly.push_str(&format!("\t.size\t{}, {}-{}\n\n", 
-            function.get_name().to_str().unwrap(),
+            function.get_name().to_str().unwrap(), 
             func_end_label,
             function.get_name().to_str().unwrap()));
         
@@ -842,7 +842,7 @@ impl AssemblyCodegenV2 {
                     assembly.push_str(&format!("\tldr\t{}, {}\n", param_reg, param_loc));
                 } else if param_loc.starts_with("#") {
                     assembly.push_str(&format!("\tmov\t{}, {}\n", param_reg, param_loc));
-                } else {
+        } else {
                     assembly.push_str(&format!("\tmov\t{}, {}\n", param_reg, param_loc));
                 }
             }
@@ -974,8 +974,8 @@ impl AssemblyCodegenV2 {
         
         // 3. 检查是否是立即数
         if let BasicValueEnum::IntValue(int_val) = value {
-            if int_val.is_const() {
-                if let Some(const_val) = int_val.get_zero_extended_constant() {
+                if int_val.is_const() {
+                    if let Some(const_val) = int_val.get_zero_extended_constant() {
                     if self.debug_mode {
                         println!("DEBUG: Found constant: #{}", const_val);
                     }
@@ -1005,7 +1005,7 @@ impl AssemblyCodegenV2 {
             } else if value_location.starts_with("#") {
                 // 立即数
                 assembly.push_str(&format!("\tmov\tw0, {}\n", value_location));
-            } else {
+        } else {
                 // 寄存器
                 assembly.push_str(&format!("\tmov\tw0, {}\n", value_location));
             }

@@ -66,56 +66,15 @@ int is_sorted(int arr[], int size) {
 }
 
 int main() {
-    const int ARRAY_SIZE = 10000;
+    const int ARRAY_SIZE = 100000;
     int arr[ARRAY_SIZE];
-    
-    printf("=== 快速排序算法测试 ===\n");
-    printf("数组大小: %d\n", ARRAY_SIZE);
     
     // 生成随机数组
     generate_random_array(arr, ARRAY_SIZE);
-    printf("原始数组已生成\n");
-    
-    // 显示前10个元素
-    printf("排序前前10个元素: ");
-    for (int i = 0; i < 10; i++) {
-        printf("%d ", arr[i]);
-    }
-    printf("\n");
-    
-    // 记录开始时间
-    clock_t start_time = clock();
     
     // 执行快速排序
     quicksort(arr, 0, ARRAY_SIZE - 1);
     
-    // 记录结束时间
-    clock_t end_time = clock();
-    
-    // 计算运行时间（毫秒）
-    double cpu_time_used = ((double)(end_time - start_time)) / CLOCKS_PER_SEC * 1000;
-    
-    // 验证排序结果
-    if (is_sorted(arr, ARRAY_SIZE)) {
-        printf("✓ 排序成功！\n");
-        printf("运行时间: %.2f 毫秒\n", cpu_time_used);
-    } else {
-        printf("✗ 排序失败！\n");
-        return 1;
-    }
-    
-    // 显示前10个和后10个元素
-    printf("排序后前10个元素: ");
-    for (int i = 0; i < 10; i++) {
-        printf("%d ", arr[i]);
-    }
-    printf("\n");
-    
-    printf("排序后后10个元素: ");
-    for (int i = ARRAY_SIZE - 10; i < ARRAY_SIZE; i++) {
-        printf("%d ", arr[i]);
-    }
-    printf("\n");
-    
-    return 0;
+    // 验证排序结果并返回
+    return is_sorted(arr, ARRAY_SIZE) ? 0 : 1;
 }

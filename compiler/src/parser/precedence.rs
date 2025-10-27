@@ -1,5 +1,6 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Precedence {
+<<<<<<< HEAD
     Lowest = 0,
     Assignment = 1,     // = += -= *= /= %= &= ^= |= <<= >>=
     Conditional = 2,    // ? :
@@ -16,4 +17,9 @@ pub enum Precedence {
     Unary = 13,         // ++ -- + - ! ~ * & (type)
     Postfix = 14,       // () [] . ->
     Primary = 15,       // literals, identifiers, parentheses
+=======
+    Lowest,
+    Sum,
+    Product,
+>>>>>>> upstream/main
 } 

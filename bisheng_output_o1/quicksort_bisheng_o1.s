@@ -299,13 +299,12 @@ is_sorted:                              // @is_sorted
 main:                                   // @main
 	.cfi_startproc
 // %bb.0:
-	str	d8, [sp, #-80]!                 // 8-byte Folded Spill
-	.cfi_def_cfa_offset 80
-	stp	x29, x30, [sp, #16]             // 16-byte Folded Spill
-	stp	x28, x23, [sp, #32]             // 16-byte Folded Spill
-	stp	x22, x21, [sp, #48]             // 16-byte Folded Spill
-	stp	x20, x19, [sp, #64]             // 16-byte Folded Spill
-	add	x29, sp, #16
+	stp	x29, x30, [sp, #-64]!           // 16-byte Folded Spill
+	.cfi_def_cfa_offset 64
+	stp	x28, x23, [sp, #16]             // 16-byte Folded Spill
+	stp	x22, x21, [sp, #32]             // 16-byte Folded Spill
+	stp	x20, x19, [sp, #48]             // 16-byte Folded Spill
+	mov	x29, sp
 	.cfi_def_cfa w29, 64
 	.cfi_offset w19, -8
 	.cfi_offset w20, -16
@@ -315,27 +314,19 @@ main:                                   // @main
 	.cfi_offset w28, -48
 	.cfi_offset w30, -56
 	.cfi_offset w29, -64
-	.cfi_offset b8, -80
-	.cfi_remember_state
-	sub	sp, sp, #9, lsl #12             // =36864
-	sub	sp, sp, #3136
-	adrp	x0, .Lstr
-	add	x0, x0, :lo12:.Lstr
-	bl	puts
-	adrp	x0, .L.str.3
-	add	x0, x0, :lo12:.L.str.3
-	mov	w1, #10000                      // =0x2710
-	bl	printf
+	sub	sp, sp, #97, lsl #12            // =397312
+	sub	sp, sp, #2688
 	mov	x0, xzr
 	bl	time
                                         // kill: def $w0 killed $w0 killed $x0
 	bl	srand
 	mov	w20, #19923                     // =0x4dd3
+	mov	w23, #6784                      // =0x1a80
 	mov	x19, xzr
 	movk	w20, #4194, lsl #16
 	mov	w21, #1000                      // =0x3e8
 	mov	x22, sp
-	mov	w23, #40000                     // =0x9c40
+	movk	w23, #6, lsl #16
 .LBB6_1:                                // =>This Inner Loop Header: Depth=1
 	bl	rand
 	smull	x8, w0, w20
@@ -348,70 +339,47 @@ main:                                   // @main
 	cmp	x19, x23
 	b.ne	.LBB6_1
 // %bb.2:
-	adrp	x0, .Lstr.11
-	add	x0, x0, :lo12:.Lstr.11
-	bl	puts
-	adrp	x0, .L.str.5
-	add	x0, x0, :lo12:.L.str.5
-	bl	printf
-	mov	x20, xzr
-	mov	x21, sp
-	adrp	x19, .L.str
-	add	x19, x19, :lo12:.L.str
-.LBB6_3:                                // =>This Inner Loop Header: Depth=1
-	ldr	w1, [x21, x20]
-	mov	x0, x19
-	bl	printf
-	add	x20, x20, #4
-	cmp	x20, #40
-	b.ne	.LBB6_3
-// %bb.4:
-	mov	w0, #10                         // =0xa
-	bl	putchar
-	bl	clock
-	mov	x19, x0
+	mov	w2, #34463                      // =0x869f
 	mov	x0, sp
 	mov	w1, wzr
-	mov	w2, #9999                       // =0x270f
-	mov	x20, sp
+	movk	w2, #1, lsl #16
+	mov	x19, sp
 	bl	quicksort
-	bl	clock
 	ldp	w9, w8, [sp]
 	cmp	w8, w9
-	b.lt	.LBB6_9
-// %bb.5:
-	add	x8, x20, #8
-	mov	x11, #-1                        // =0xffffffffffffffff
-	mov	x9, #-9999                      // =0xffffffffffffd8f1
-.LBB6_6:                                // =>This Inner Loop Header: Depth=1
-	mov	x10, x11
-	cmp	x11, x9
-	b.eq	.LBB6_8
-// %bb.7:                               //   in Loop: Header=BB6_6 Depth=1
-	ldp	w13, w12, [x8, #-4]
-	sub	x11, x10, #1
-	add	x8, x8, #4
-	cmp	w12, w13
-	b.ge	.LBB6_6
-.LBB6_8:
-	neg	x8, x10
-	mov	w9, #9998                       // =0x270e
-	cmp	x8, x9
-	b.hi	.LBB6_11
-.LBB6_9:
-	adrp	x0, .Lstr.12
-	add	x0, x0, :lo12:.Lstr.12
-	bl	puts
+	b.ge	.LBB6_4
+// %bb.3:
 	mov	w0, #1                          // =0x1
-.LBB6_10:
-	add	sp, sp, #9, lsl #12             // =36864
-	add	sp, sp, #3136
-	.cfi_def_cfa wsp, 80
-	ldp	x20, x19, [sp, #64]             // 16-byte Folded Reload
-	ldp	x22, x21, [sp, #48]             // 16-byte Folded Reload
-	ldp	x28, x23, [sp, #32]             // 16-byte Folded Reload
-	ldp	x29, x30, [sp, #16]             // 16-byte Folded Reload
-	ldr	d8, [sp], #80                   // 8-byte Folded Reload
+	b	.LBB6_8
+.LBB6_4:
+	mov	w8, #34462                      // =0x869e
+	add	x9, x19, #8
+	movk	w8, #1, lsl #16
+	mov	x11, #-1                        // =0xffffffffffffffff
+.LBB6_5:                                // =>This Inner Loop Header: Depth=1
+	mov	x10, x11
+	add	x11, x11, x8
+	cmn	x11, #1
+	b.eq	.LBB6_7
+// %bb.6:                               //   in Loop: Header=BB6_5 Depth=1
+	ldp	w13, w12, [x9, #-4]
+	sub	x11, x10, #1
+	add	x9, x9, #4
+	cmp	w12, w13
+	b.ge	.LBB6_5
+.LBB6_7:
+	neg	x9, x10
+	add	x8, x8, #1
+	cmp	x9, x8
+	cset	w0, lo
+.LBB6_8:
+	add	sp, sp, #97, lsl #12            // =397312
+	add	sp, sp, #2688
+	.cfi_def_cfa wsp, 64
+	ldp	x20, x19, [sp, #48]             // 16-byte Folded Reload
+	ldp	x22, x21, [sp, #32]             // 16-byte Folded Reload
+	ldp	x28, x23, [sp, #16]             // 16-byte Folded Reload
+	ldp	x29, x30, [sp], #64             // 16-byte Folded Reload
 	.cfi_def_cfa_offset 0
 	.cfi_restore w19
 	.cfi_restore w20
@@ -421,65 +389,7 @@ main:                                   // @main
 	.cfi_restore w28
 	.cfi_restore w30
 	.cfi_restore w29
-	.cfi_restore b8
 	ret
-.LBB6_11:
-	.cfi_restore_state
-	sub	x8, x0, x19
-	mov	x9, #145685290680320            // =0x848000000000
-	movk	x9, #16686, lsl #48
-	adrp	x0, .Lstr.13
-	add	x0, x0, :lo12:.Lstr.13
-	scvtf	d0, x8
-	mov	x8, #70368744177664             // =0x400000000000
-	fmov	d1, x9
-	movk	x8, #16527, lsl #48
-	fdiv	d0, d0, d1
-	fmov	d1, x8
-	fmul	d8, d0, d1
-	bl	puts
-	fmov	d0, d8
-	adrp	x0, .L.str.7
-	add	x0, x0, :lo12:.L.str.7
-	bl	printf
-	adrp	x0, .L.str.9
-	add	x0, x0, :lo12:.L.str.9
-	bl	printf
-	mov	x20, xzr
-	mov	x21, sp
-	adrp	x19, .L.str
-	add	x19, x19, :lo12:.L.str
-.LBB6_12:                               // =>This Inner Loop Header: Depth=1
-	ldr	w1, [x21, x20]
-	mov	x0, x19
-	bl	printf
-	add	x20, x20, #4
-	cmp	x20, #40
-	b.ne	.LBB6_12
-// %bb.13:
-	mov	w0, #10                         // =0xa
-	bl	putchar
-	adrp	x0, .L.str.10
-	add	x0, x0, :lo12:.L.str.10
-	bl	printf
-	mov	w8, #39960                      // =0x9c18
-	mov	x9, sp
-	mov	x20, xzr
-	add	x21, x9, x8
-	adrp	x19, .L.str
-	add	x19, x19, :lo12:.L.str
-.LBB6_14:                               // =>This Inner Loop Header: Depth=1
-	ldr	w1, [x21, x20]
-	mov	x0, x19
-	bl	printf
-	add	x20, x20, #4
-	cmp	x20, #40
-	b.ne	.LBB6_14
-// %bb.15:
-	mov	w0, #10                         // =0xa
-	bl	putchar
-	mov	w0, wzr
-	b	.LBB6_10
 .Lfunc_end6:
 	.size	main, .Lfunc_end6-main
 	.cfi_endproc
@@ -489,51 +399,6 @@ main:                                   // @main
 .L.str:
 	.asciz	"%d "
 	.size	.L.str, 4
-
-	.type	.L.str.3,@object                // @.str.3
-.L.str.3:
-	.asciz	"\346\225\260\347\273\204\345\244\247\345\260\217: %d\n"
-	.size	.L.str.3, 18
-
-	.type	.L.str.5,@object                // @.str.5
-.L.str.5:
-	.asciz	"\346\216\222\345\272\217\345\211\215\345\211\21510\344\270\252\345\205\203\347\264\240: "
-	.size	.L.str.5, 26
-
-	.type	.L.str.7,@object                // @.str.7
-.L.str.7:
-	.asciz	"\350\277\220\350\241\214\346\227\266\351\227\264: %.2f \346\257\253\347\247\222\n"
-	.size	.L.str.7, 27
-
-	.type	.L.str.9,@object                // @.str.9
-.L.str.9:
-	.asciz	"\346\216\222\345\272\217\345\220\216\345\211\21510\344\270\252\345\205\203\347\264\240: "
-	.size	.L.str.9, 26
-
-	.type	.L.str.10,@object               // @.str.10
-.L.str.10:
-	.asciz	"\346\216\222\345\272\217\345\220\216\345\220\21610\344\270\252\345\205\203\347\264\240: "
-	.size	.L.str.10, 26
-
-	.type	.Lstr,@object                   // @str
-.Lstr:
-	.asciz	"=== \345\277\253\351\200\237\346\216\222\345\272\217\347\256\227\346\263\225\346\265\213\350\257\225 ==="
-	.size	.Lstr, 33
-
-	.type	.Lstr.11,@object                // @str.11
-.Lstr.11:
-	.asciz	"\345\216\237\345\247\213\346\225\260\347\273\204\345\267\262\347\224\237\346\210\220"
-	.size	.Lstr.11, 22
-
-	.type	.Lstr.12,@object                // @str.12
-.Lstr.12:
-	.asciz	"\342\234\227 \346\216\222\345\272\217\345\244\261\350\264\245\357\274\201"
-	.size	.Lstr.12, 20
-
-	.type	.Lstr.13,@object                // @str.13
-.Lstr.13:
-	.asciz	"\342\234\223 \346\216\222\345\272\217\346\210\220\345\212\237\357\274\201"
-	.size	.Lstr.13, 20
 
 	.ident	"BiSheng Enterprise 4.2.0.2.B002 clang version 17.0.6 (2261d9fde4e0)"
 	.section	".note.GNU-stack","",@progbits

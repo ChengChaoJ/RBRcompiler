@@ -1,7 +1,12 @@
+<<<<<<< HEAD
 use super::ast::{ASTNode, BinaryOperator, UnaryOperator};
 use super::precedence::Precedence;
 use crate::lexer::token::Token;
 use crate::error::error::CompileError;
+=======
+use super::ast::ASTNode;
+use crate::lexer::token::Token;
+>>>>>>> upstream/main
 
 pub struct Parser {
     pub tokens: Vec<Token>,
@@ -13,6 +18,7 @@ impl Parser {
         Self { tokens, current: 0 }
     }
 
+<<<<<<< HEAD
     pub fn parse(&mut self) -> Result<ASTNode, CompileError> {
         let mut statements = Vec::new();
         
@@ -869,5 +875,10 @@ mod tests {
             }
             _ => panic!("Expected program"),
         }
+=======
+    pub fn parse(&mut self) -> ASTNode {
+        // TODO: implement real parsing
+        ASTNode::Program(vec![ASTNode::Empty])
+>>>>>>> upstream/main
     }
 } 

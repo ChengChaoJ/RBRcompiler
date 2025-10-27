@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# BiSheng编译器分区函数测试脚本 - 移除可执行文件大小对比
+# BiSheng编译器分区函数测试脚本 - O0 vs O1 vs O2 对比
 
 set -eo pipefail
 
@@ -11,7 +11,7 @@ RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}=== BiSheng编译器分区函数测试 ===${NC}"
+echo -e "${BLUE}=== BiSheng编译器优化级别对比测试 (O0 vs O1 vs O2) ===${NC}"
 
 # 设置BiSheng环境
 export BISHENG_HOME=${BISHENG_HOME:-/opt/compiler/BiShengCompiler-4.2.0.2-aarch64-linux}
@@ -50,286 +50,159 @@ echo ""
 OUTPUT_DIR="partition_output"
 mkdir -p "$OUTPUT_DIR"
 
-# 1. 编译程序 - 无优化版本
-echo -e "${BLUE}=== 编译程序 (无优化) ===${NC}"
-UNOPTIMIZED_EXE="$OUTPUT_DIR/partition_unoptimized"
-
-echo "编译无优化版本..."
-if clang -O0 "$INPUT_FILE" -o "$UNOPTIMIZED_EXE" 2>/dev/null; then
-    echo -e "${GREEN}✓ BiSheng无优化动态链接编译成功${NC}"
-    UNOPTIMIZED_METHOD="BiSheng动态链接(无优化)"
+# 1. 编译程序 - O0 (无优化)
+echo -e "${BLUE}=== 编译程序 (O0 无优化) ===${NC}"
+O0_EXE="$OUTPUT_DIR/partition_o0"
+if clang -O0 "$INPUT_FILE" -o "$O0_EXE" 2>/dev/null; then
+    echo -e "${GREEN}✓ O0 编译成功${NC}"
 else
-    echo -e "${RED}✗ BiSheng无优化编译失败${NC}"
+    echo -e "${RED}✗ O0 编译失败${NC}"
     exit 1
-fi
-
-# 显示无优化文件信息（仅显示编译方法）
-if [ -f "$UNOPTIMIZED_EXE" ]; then
-    echo "编译方法: $UNOPTIMIZED_METHOD"
 fi
 echo ""
 
-# 2. 编译程序 - 优化版本
-echo -e "${BLUE}=== 编译程序 (优化) ===${NC}"
-OPTIMIZED_EXE="$OUTPUT_DIR/partition_optimized"
-
-echo "编译优化版本..."
-if clang -O2 "$INPUT_FILE" -o "$OPTIMIZED_EXE" 2>/dev/null; then
-    echo -e "${GREEN}✓ BiSheng优化动态链接编译成功${NC}"
-    OPTIMIZED_METHOD="BiSheng动态链接(优化)"
+# 2. 编译程序 - O1 (基本优化)
+echo -e "${BLUE}=== 编译程序 (O1 基本优化) ===${NC}"
+O1_EXE="$OUTPUT_DIR/partition_o1"
+if clang -O1 "$INPUT_FILE" -o "$O1_EXE" 2>/dev/null; then
+    echo -e "${GREEN}✓ O1 编译成功${NC}"
 else
-    echo -e "${RED}✗ BiSheng优化编译失败${NC}"
+    echo -e "${RED}✗ O1 编译失败${NC}"
     exit 1
-fi
-
-# 显示优化文件信息（仅显示编译方法）
-if [ -f "$OPTIMIZED_EXE" ]; then
-    echo "编译方法: $OPTIMIZED_METHOD"
 fi
 echo ""
 
-# 3. 生成汇编代码
+# 3. 编译程序 - O2 (标准优化)
+echo -e "${BLUE}=== 编译程序 (O2 标准优化) ===${NC}"
+O2_EXE="$OUTPUT_DIR/partition_o2"
+if clang -O2 "$INPUT_FILE" -o "$O2_EXE" 2>/dev/null; then
+    echo -e "${GREEN}✓ O2 编译成功${NC}"
+else
+    echo -e "${RED}✗ O2 编译失败${NC}"
+    exit 1
+fi
+echo ""
+
+# 4. 生成汇编代码
 echo -e "${BLUE}=== 生成汇编代码 ===${NC}"
-UNOPTIMIZED_ASM="$OUTPUT_DIR/partition_unoptimized.s"
-OPTIMIZED_ASM="$OUTPUT_DIR/partition_optimized.s"
+O0_ASM="$OUTPUT_DIR/partition_o0.s"
+O1_ASM="$OUTPUT_DIR/partition_o1.s"
+O2_ASM="$OUTPUT_DIR/partition_o2.s"
 
-# 生成无优化汇编
-echo "生成无优化汇编代码 (O0)..."
-if clang -S -O0 "$INPUT_FILE" -o "$UNOPTIMIZED_ASM" 2>/dev/null; then
-    echo -e "${GREEN}✓ BiSheng无优化汇编代码生成成功${NC}"
-    UNOPTIMIZED_ASM_SIZE=$(stat -c%s "$UNOPTIMIZED_ASM" 2>/dev/null || stat -f%z "$UNOPTIMIZED_ASM" 2>/dev/null || echo "未知")
-    echo "  文件大小: $UNOPTIMIZED_ASM_SIZE 字节"
-    
-    # 统计汇编指令行数（排除指令、空行、注释）
-    UNOPTIMIZED_ASM_LINES=$(grep -v "^\s*\." "$UNOPTIMIZED_ASM" | grep -v "^\s*$" | grep -v "^\s*//" | wc -l 2>/dev/null || echo "未知")
-    echo "  指令行数: $UNOPTIMIZED_ASM_LINES"
+# 生成 O0 汇编
+echo "生成 O0 汇编..."
+if clang -S -O0 "$INPUT_FILE" -o "$O0_ASM" 2>/dev/null; then
+    O0_ASM_SIZE=$(stat -c%s "$O0_ASM" 2>/dev/null || stat -f%z "$O0_ASM" 2>/dev/null || echo "0")
+    O0_ASM_LINES=$(grep -v "^\s*\." "$O0_ASM" | grep -v "^\s*$" | grep -v "^\s*//" | wc -l 2>/dev/null || echo "0")
+    echo -e "${GREEN}✓ O0 汇编生成成功${NC} - $O0_ASM_SIZE 字节, $O0_ASM_LINES 指令行"
 else
-    echo -e "${YELLOW}⚠ BiSheng无优化汇编代码生成失败${NC}"
+    echo -e "${RED}✗ O0 汇编生成失败${NC}"
 fi
-echo ""
 
-# 生成优化汇编
-echo "生成优化汇编代码 (O2)..."
-if clang -S -O2 "$INPUT_FILE" -o "$OPTIMIZED_ASM" 2>/dev/null; then
-    echo -e "${GREEN}✓ BiSheng优化汇编代码生成成功${NC}"
-    OPTIMIZED_ASM_SIZE=$(stat -c%s "$OPTIMIZED_ASM" 2>/dev/null || stat -f%z "$OPTIMIZED_ASM" 2>/dev/null || echo "未知")
-    echo "  文件大小: $OPTIMIZED_ASM_SIZE 字节"
-    
-    # 统计汇编指令行数
-    OPTIMIZED_ASM_LINES=$(grep -v "^\s*\." "$OPTIMIZED_ASM" | grep -v "^\s*$" | grep -v "^\s*//" | wc -l 2>/dev/null || echo "未知")
-    echo "  指令行数: $OPTIMIZED_ASM_LINES"
+# 生成 O1 汇编
+echo "生成 O1 汇编..."
+if clang -S -O1 "$INPUT_FILE" -o "$O1_ASM" 2>/dev/null; then
+    O1_ASM_SIZE=$(stat -c%s "$O1_ASM" 2>/dev/null || stat -f%z "$O1_ASM" 2>/dev/null || echo "0")
+    O1_ASM_LINES=$(grep -v "^\s*\." "$O1_ASM" | grep -v "^\s*$" | grep -v "^\s*//" | wc -l 2>/dev/null || echo "0")
+    echo -e "${GREEN}✓ O1 汇编生成成功${NC} - $O1_ASM_SIZE 字节, $O1_ASM_LINES 指令行"
 else
-    echo -e "${YELLOW}⚠ BiSheng优化汇编代码生成失败${NC}"
+    echo -e "${RED}✗ O1 汇编生成失败${NC}"
 fi
-echo ""
 
-# 4. 运行程序 - 无优化版本
-echo -e "${BLUE}=== 运行程序 (无优化版本) ===${NC}"
-echo "程序输出:"
-echo "----------------------------------------"
-
-if [ -x "$UNOPTIMIZED_EXE" ]; then
-    echo "无优化程序可执行，开始运行..."
-    
-    # 记录开始时间
-    START_TIME=$(date +%s%3N 2>/dev/null || date +%s)
-    
-    # 直接运行程序
-    if "$UNOPTIMIZED_EXE" 2>&1; then
-        echo "----------------------------------------"
-        echo -e "${GREEN}✓ 无优化程序运行成功${NC}"
-    else
-        echo "----------------------------------------"
-        echo -e "${YELLOW}⚠ 无优化程序运行完成，但可能有警告${NC}"
-    fi
-    
-    # 记录结束时间
-    END_TIME=$(date +%s%3N 2>/dev/null || date +%s)
-    UNOPTIMIZED_TIME=$((END_TIME - START_TIME))
-    echo "无优化版本运行时间: ${UNOPTIMIZED_TIME}ms"
+# 生成 O2 汇编
+echo "生成 O2 汇编..."
+if clang -S -O2 "$INPUT_FILE" -o "$O2_ASM" 2>/dev/null; then
+    O2_ASM_SIZE=$(stat -c%s "$O2_ASM" 2>/dev/null || stat -f%z "$O2_ASM" 2>/dev/null || echo "0")
+    O2_ASM_LINES=$(grep -v "^\s*\." "$O2_ASM" | grep -v "^\s*$" | grep -v "^\s*//" | wc -l 2>/dev/null || echo "0")
+    echo -e "${GREEN}✓ O2 汇编生成成功${NC} - $O2_ASM_SIZE 字节, $O2_ASM_LINES 指令行"
 else
-    echo -e "${RED}✗ 无优化程序不可执行${NC}"
+    echo -e "${RED}✗ O2 汇编生成失败${NC}"
 fi
 echo ""
 
-# 5. 运行程序 - 优化版本
-echo -e "${BLUE}=== 运行程序 (优化版本) ===${NC}"
-echo "程序输出:"
-echo "----------------------------------------"
-
-if [ -x "$OPTIMIZED_EXE" ]; then
-    echo "优化程序可执行，开始运行..."
-    
-    # 记录开始时间
-    START_TIME=$(date +%s%3N 2>/dev/null || date +%s)
-    
-    # 直接运行程序
-    if "$OPTIMIZED_EXE" 2>&1; then
-        echo "----------------------------------------"
-        echo -e "${GREEN}✓ 优化程序运行成功${NC}"
-    else
-        echo "----------------------------------------"
-        echo -e "${YELLOW}⚠ 优化程序运行完成，但可能有警告${NC}"
-    fi
-    
-    # 记录结束时间
-    END_TIME=$(date +%s%3N 2>/dev/null || date +%s)
-    OPTIMIZED_TIME=$((END_TIME - START_TIME))
-    echo "优化版本运行时间: ${OPTIMIZED_TIME}ms"
-else
-    echo -e "${RED}✗ 优化程序不可执行${NC}"
-fi
+# 5. 性能测试 - 运行并显示程序内部计时
+echo -e "${BLUE}=== 性能测试 (partition 函数执行时间) ===${NC}"
 echo ""
 
-# 6. 性能测试 - 无优化版本
-echo -e "${BLUE}=== 性能测试 (无优化版本) ===${NC}"
-echo "进行3次性能测试..."
-
-UNOPTIMIZED_TIMES=()
-for i in {1..3}; do
-    echo "第 $i 次运行 (无优化)..."
-    START_TIME=$(date +%s%3N 2>/dev/null || date +%s)
-    
-    # 直接运行程序
-    "$UNOPTIMIZED_EXE" >/dev/null 2>&1
-    
-    END_TIME=$(date +%s%3N 2>/dev/null || date +%s)
-    RUNTIME=$((END_TIME - START_TIME))
-    UNOPTIMIZED_TIMES+=($RUNTIME)
-    echo "  运行时间: ${RUNTIME}ms"
-done
-
-# 计算无优化平均时间
-if [ ${#UNOPTIMIZED_TIMES[@]} -gt 0 ]; then
-    SUM=0
-    for time in "${UNOPTIMIZED_TIMES[@]}"; do
-        SUM=$((SUM + time))
-    done
-    UNOPTIMIZED_AVG=$((SUM / ${#UNOPTIMIZED_TIMES[@]}))
-    echo "无优化平均运行时间: ${UNOPTIMIZED_AVG}ms"
-fi
+# O0 性能测试
+echo -e "${CYAN}O0 (无优化):${NC}"
+set +e
+O0_OUTPUT=$("$O0_EXE" 2>&1)
+O0_EXIT=$?
+echo "$O0_OUTPUT"
+O0_TIME=$(echo "$O0_OUTPUT" | grep "平均执行时间" | grep -oE '[0-9]+\.[0-9]+')
+set -e
 echo ""
 
-# 7. 性能测试 - 优化版本
-echo -e "${BLUE}=== 性能测试 (优化版本) ===${NC}"
-echo "进行3次性能测试..."
-
-OPTIMIZED_TIMES=()
-for i in {1..3}; do
-    echo "第 $i 次运行 (优化)..."
-    START_TIME=$(date +%s%3N 2>/dev/null || date +%s)
-    
-    # 直接运行程序
-    "$OPTIMIZED_EXE" >/dev/null 2>&1
-    
-    END_TIME=$(date +%s%3N 2>/dev/null || date +%s)
-    RUNTIME=$((END_TIME - START_TIME))
-    OPTIMIZED_TIMES+=($RUNTIME)
-    echo "  运行时间: ${RUNTIME}ms"
-done
-
-# 计算优化平均时间
-if [ ${#OPTIMIZED_TIMES[@]} -gt 0 ]; then
-    SUM=0
-    for time in "${OPTIMIZED_TIMES[@]}"; do
-        SUM=$((SUM + time))
-    done
-    OPTIMIZED_AVG=$((SUM / ${#OPTIMIZED_TIMES[@]}))
-    echo "优化平均运行时间: ${OPTIMIZED_AVG}ms"
-fi
+# O1 性能测试  
+echo -e "${CYAN}O1 (基本优化):${NC}"
+set +e
+O1_OUTPUT=$("$O1_EXE" 2>&1)
+O1_EXIT=$?
+echo "$O1_OUTPUT"
+O1_TIME=$(echo "$O1_OUTPUT" | grep "平均执行时间" | grep -oE '[0-9]+\.[0-9]+')
+set -e
 echo ""
 
-# 8. 性能对比报告
-echo -e "${BLUE}=== 性能对比报告 (O0 vs O2) ===${NC}"
+# O2 性能测试
+echo -e "${CYAN}O2 (标准优化):${NC}"
+set +e
+O2_OUTPUT=$("$O2_EXE" 2>&1)
+O2_EXIT=$?
+echo "$O2_OUTPUT"
+O2_TIME=$(echo "$O2_OUTPUT" | grep "平均执行时间" | grep -oE '[0-9]+\.[0-9]+')
+set -e
 echo ""
 
-# 汇编文件大小对比
-echo -e "${CYAN}📄 汇编文件对比:${NC}"
-printf "%-20s %-18s %-18s %-18s %-18s\n" "优化级别" "文件大小(字节)" "指令行数" "相对大小" "变化率"
-printf "%-20s %-18s %-18s %-18s %-18s\n" "--------------------" "------------------" "------------------" "------------------" "------------------"
-
-if [ "$UNOPTIMIZED_ASM_SIZE" != "未知" ] && [ "$OPTIMIZED_ASM_SIZE" != "未知" ]; then
-    ASM_SIZE_REDUCTION=$((UNOPTIMIZED_ASM_SIZE - OPTIMIZED_ASM_SIZE))
-    ASM_SIZE_REDUCTION_PERCENT=$((ASM_SIZE_REDUCTION * 100 / UNOPTIMIZED_ASM_SIZE))
-    
-    ASM_CHANGE_TYPE="减少"
-    ASM_CHANGE_SIGN="-"
-    if [ $ASM_SIZE_REDUCTION -lt 0 ]; then
-        ASM_CHANGE_TYPE="增加"
-        ASM_CHANGE_SIGN="+"
-        ASM_SIZE_REDUCTION=$((OPTIMIZED_ASM_SIZE - UNOPTIMIZED_ASM_SIZE))
-        ASM_SIZE_REDUCTION_PERCENT=$((ASM_SIZE_REDUCTION * 100 / UNOPTIMIZED_ASM_SIZE))
-    fi
-    
-    printf "%-20s %-18s %-18s %-18s %-18s\n" "无优化 (O0)" "$UNOPTIMIZED_ASM_SIZE" "$UNOPTIMIZED_ASM_LINES" "100%" "基准"
-    printf "%-20s %-18s %-18s %-18s %-18s\n" "优化 (O2)" "$OPTIMIZED_ASM_SIZE" "$OPTIMIZED_ASM_LINES" "$((OPTIMIZED_ASM_SIZE * 100 / UNOPTIMIZED_ASM_SIZE))%" "${ASM_CHANGE_TYPE}: ${ASM_CHANGE_SIGN}${ASM_SIZE_REDUCTION_PERCENT}%"
-else
-    printf "%-20s %-18s %-18s %-18s %-18s\n" "无优化 (O0)" "$UNOPTIMIZED_ASM_SIZE" "$UNOPTIMIZED_ASM_LINES" "N/A" "N/A"
-    printf "%-20s %-18s %-18s %-18s %-18s\n" "优化 (O2)" "$OPTIMIZED_ASM_SIZE" "$OPTIMIZED_ASM_LINES" "N/A" "N/A"
-fi
-
+# 6. 性能对比
+echo -e "${BLUE}=== 性能对比总结 ===${NC}"
 echo ""
 
 # 运行时间对比
-echo -e "${CYAN}⚡ 运行时间对比 (平均 3 次):${NC}"
-printf "%-20s %-18s %-18s %-18s\n" "优化级别" "平均时间(ms)" "相对速度" "性能提升"
-printf "%-20s %-18s %-18s %-18s\n" "--------------------" "------------------" "------------------" "------------------"
+echo -e "${CYAN}⚡ partition函数平均执行时间 (100次):${NC}"
+printf "%-15s %-20s %-15s %-15s\n" "优化级别" "执行时间(毫秒)" "相对速度" "性能提升"
+printf "%-15s %-20s %-15s %-15s\n" "---------------" "--------------------" "---------------" "---------------"
 
-if [ $UNOPTIMIZED_AVG -gt 0 ] && [ $OPTIMIZED_AVG -gt 0 ]; then
-    SPEEDUP=$((UNOPTIMIZED_AVG * 100 / OPTIMIZED_AVG))
-    SPEEDUP_PERCENT=$((SPEEDUP - 100))
+if [ -n "$O0_TIME" ] && [ -n "$O1_TIME" ] && [ -n "$O2_TIME" ]; then
+    printf "%-15s %-20s %-15s %-15s\n" "O0 (无优化)" "$O0_TIME" "100%" "基准"
     
-    printf "%-20s %-18s %-18s %-18s\n" "无优化 (O0)" "$UNOPTIMIZED_AVG" "100%" "基准"
-    printf "%-20s %-18s %-18s %-18s\n" "优化 (O2)" "$OPTIMIZED_AVG" "$((OPTIMIZED_AVG * 100 / UNOPTIMIZED_AVG))%" "快 ${SPEEDUP_PERCENT}%"
+    # 使用 awk 计算浮点数
+    O1_SPEEDUP=$(awk "BEGIN {printf \"%.1f\", ($O0_TIME - $O1_TIME) / $O0_TIME * 100}")
+    O2_SPEEDUP=$(awk "BEGIN {printf \"%.1f\", ($O0_TIME - $O2_TIME) / $O0_TIME * 100}")
+    O1_PERCENT=$(awk "BEGIN {printf \"%.1f\", $O1_TIME / $O0_TIME * 100}")
+    O2_PERCENT=$(awk "BEGIN {printf \"%.1f\", $O2_TIME / $O0_TIME * 100}")
+    
+    printf "%-15s %-20s %-15s %-15s\n" "O1 (基本)" "$O1_TIME" "${O1_PERCENT}%" "快${O1_SPEEDUP}%"
+    printf "%-15s %-20s %-15s %-15s\n" "O2 (标准)" "$O2_TIME" "${O2_PERCENT}%" "快${O2_SPEEDUP}%"
 else
-    printf "%-20s %-18s %-18s %-18s\n" "无优化 (O0)" "$UNOPTIMIZED_AVG" "N/A" "N/A"
-    printf "%-20s %-18s %-18s %-18s\n" "优化 (O2)" "$OPTIMIZED_AVG" "N/A" "N/A"
+    echo "无法提取时间数据"
+    echo "O0_TIME=$O0_TIME, O1_TIME=$O1_TIME, O2_TIME=$O2_TIME"
 fi
-
 echo ""
 
-# 9. 生成报告
-echo -e "${BLUE}=== 编译报告 ===${NC}"
-echo "源文件: $INPUT_FILE"
+# 汇编代码对比
+echo -e "${CYAN}📄 汇编代码对比:${NC}"
+printf "%-15s %-15s %-15s %-15s\n" "优化级别" "文件大小" "指令行数" "指令减少"
+printf "%-15s %-15s %-15s %-15s\n" "---------------" "---------------" "---------------" "---------------"
+printf "%-15s %-15s %-15s %-15s\n" "O0 (无优化)" "$O0_ASM_SIZE" "$O0_ASM_LINES" "0%"
+
+if [ "$O0_ASM_LINES" -gt 0 ]; then
+    O1_REDUCTION=$((100 - O1_ASM_LINES * 100 / O0_ASM_LINES))
+    printf "%-15s %-15s %-15s %-15s\n" "O1 (基本)" "$O1_ASM_SIZE" "$O1_ASM_LINES" "${O1_REDUCTION}%"
+    
+    O2_REDUCTION=$((100 - O2_ASM_LINES * 100 / O0_ASM_LINES))
+    printf "%-15s %-15s %-15s %-15s\n" "O2 (标准)" "$O2_ASM_SIZE" "$O2_ASM_LINES" "${O2_REDUCTION}%"
+fi
+echo ""
+
+# 7. 总结
+echo -e "${GREEN}=== 测试完成 ===${NC}"
 echo "输出目录: $OUTPUT_DIR"
 echo ""
-echo "编译配置:"
-echo "  无优化编译: $UNOPTIMIZED_METHOD"
-echo "  优化编译:   $OPTIMIZED_METHOD"
+echo "生成的文件:"
+ls -lh "$OUTPUT_DIR" | grep partition
 echo ""
-echo "生成的汇编文件:"
-if [ -f "$UNOPTIMIZED_ASM" ]; then
-    echo "  O0 汇编: $UNOPTIMIZED_ASM ($UNOPTIMIZED_ASM_SIZE 字节, $UNOPTIMIZED_ASM_LINES 指令行)"
-fi
-if [ -f "$OPTIMIZED_ASM" ]; then
-    echo "  O2 汇编: $OPTIMIZED_ASM ($OPTIMIZED_ASM_SIZE 字节, $OPTIMIZED_ASM_LINES 指令行)"
-fi
-echo ""
-echo "所有生成文件:"
-ls -lh "$OUTPUT_DIR" 2>/dev/null || echo "输出目录为空"
-echo ""
-
-# 10. 显示汇编代码片段
-echo -e "${BLUE}=== 汇编代码片段对比 ===${NC}"
-echo ""
-
-if [ -f "$UNOPTIMIZED_ASM" ]; then
-    echo -e "${CYAN}无优化 (O0) 汇编代码 - 前15行:${NC}"
-    head -15 "$UNOPTIMIZED_ASM"
-    echo "..."
-    echo ""
-fi
-
-if [ -f "$OPTIMIZED_ASM" ]; then
-    echo -e "${CYAN}优化 (O2) 汇编代码 - 前15行:${NC}"
-    head -15 "$OPTIMIZED_ASM"
-    echo "..."
-    echo ""
-fi
-
-echo -e "${GREEN}=== BiSheng编译器分区函数测试完成 ===${NC}"
-echo "所有输出文件保存在: $OUTPUT_DIR"
-echo ""
-echo "汇编文件:"
-echo "  无优化 (O0): $UNOPTIMIZED_ASM"
-echo "  优化 (O2):   $OPTIMIZED_ASM"
+echo "💡 关键发现:"
+echo "  - 指令数减少越多，代码越精简"
+echo "  - 运行时间越短，性能越好"
+echo "  - O1 通常是性能和编译时间的最佳平衡"

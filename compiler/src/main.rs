@@ -315,7 +315,6 @@ fn main() -> Result<()> {
                 .with_context(|| "Failed to serialize tokens to JSON")?
         }
     };
-
     // Write output
     if let Some(output_file) = cli.output {
         fs::write(&output_file, output)
